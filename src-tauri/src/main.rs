@@ -4,17 +4,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use tracing_error::ErrorLayer;
 use tracing_appender::rolling;
 
-use color_eyre::eyre::{Result, WrapErr};
-
 mod app;
 use app::run_app;
 
 mod utils;
 
-fn main() -> Result<()> {
-  // Сначала регистрируем color-eyre — он сам ставит panic hook и интеграцию с tracing_error
-  color_eyre::install().wrap_err("Couldn't initialize color-eyre")?;
-
+fn main() -> Result<(), String> {
   // rolling log file
   let file_appender = rolling::daily("logs", "error.log");
   let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);

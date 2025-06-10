@@ -1,15 +1,14 @@
 #[macro_export]
 macro_rules! log_err_or_return {
-  ($res:expr, $msg:expr) => {{
-    match $res {
-      Ok(val) => val,
-      Err(err) => {
-        tracing::error!("{}: {:?}", $msg, err);
-        
-        return Err(err.into());
-      }
-    }
-  }};
+  ($res:expr, $msg:expr) => {
+    $res.map_err(|err| {
+      let full_msg = format!("{}: {:?}", $msg, err);
+      
+      tracing::error!("{}", full_msg);
+      
+      full_msg
+    })?
+  };
 }
 
 #[macro_export]
@@ -17,7 +16,7 @@ macro_rules! log_err_and_continue {
   ($res:expr, $msg:expr) => {{
     $res.map_err(|err| {
       tracing::error!("{}: {:?}", $msg, err);
-      
+
       err
     })
   }};
