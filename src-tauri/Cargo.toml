@@ -27,3 +27,11 @@ tauri-plugin-global-shortcut = "2"
 arboard = "3"
 enigo = "0.1"
 tauri-plugin-notification = "2"
+
+color-eyre = "0.6"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "std"] }
+tracing-error = "0.2"
+tracing-appender = "0.2"
+anyhow = "1.0.98"
