@@ -8,6 +8,7 @@ mod app;
 use app::run_app;
 
 mod utils;
+mod listen_for_double_ctrl_or_cmd;
 
 fn main() -> Result<(), String> {
   // rolling log file

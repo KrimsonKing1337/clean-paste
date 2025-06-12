@@ -1,9 +1,19 @@
+//#region Rust uses
+use std::io::Read;
+use std::io::Write;
+use std::thread::sleep;
+use std::time::Duration;
+//#endregion Rust uses
+
 //#region tauri uses
 #[rustfmt::skip]
 use tauri::{
   // traits
   Emitter,
   Manager,
+
+  // types
+  Wry,
 
   // enums
   WindowEvent,
@@ -16,7 +26,7 @@ use tauri::{
 //#endregion tauri uses
 
 //#region tauri plugins uses
-use tauri::menu::{MenuItem, Menu, MenuEvent};
+use tauri::menu::{MenuItem, Menu, MenuEvent, IsMenuItem};
 
 use tauri_plugin_notification::NotificationExt;
 
@@ -48,9 +58,11 @@ use tauri_plugin_global_shortcut::{
 };
 //#endregion
 
-use crate::log_err_or_return;
-use crate::log_err_and_continue;
-use crate::log_err_and_ignore;
+use single_instance::SingleInstance;
+use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
+
+use crate::{listen_for_double_ctrl_or_cmd::listen_for_double_ctrl_or_cmd};
+use crate::{log_err_or_return, log_err_and_continue, log_err_and_ignore};
 
 #[tauri::command]
 fn clean_clipboard() -> Result<String, String> {
@@ -63,37 +75,73 @@ fn clean_clipboard() -> Result<String, String> {
   Ok(text)
 }
 
-fn get_shortcut_hot_key(code: Code) -> Shortcut {
-  Shortcut::new(Some(Modifiers::META | Modifiers::ALT), code)
+fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
+  let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")?;
+
+  let _ = app_handle.emit("clean_clipboard", &msg);
+
+  let notification = app_handle
+    .notification()
+    .builder()
+    .title("clean-paste")
+    .body("Formatting deleted!");
+
+  log_err_and_ignore!(notification.show(), "Couldn't show a notification");
+
+  Ok(())
+}
+
+fn get_default_shortcut() -> Shortcut {
+  if cfg!(target_os = "macos") {
+    Shortcut::new(Some(Modifiers::META | Modifiers::ALT), Code::KeyV)
+  } else {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV)
+  }
+}
+
+fn send_formatting_cleanup_signal() -> Result<(), String> {
+  let name = "clean-paste-socket";
+  let ns_name = name.to_ns_name::<GenericNamespaced>().map_err(|e| e.to_string())?;
+
+  for _ in 0..5 {
+    match Stream::connect(ns_name.clone()) {
+      Ok(mut stream) => {
+        stream.write_all(&[1]).map_err(|e| e.to_string())?;
+        return Ok(());
+      }
+      Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+        sleep(Duration::from_millis(100));
+        continue;
+      }
+      Err(e) => return Err(e.to_string()),
+    }
+  }
+
+  Err("Не удалось подключиться к IPC-серверу после нескольких попыток".to_string())
 }
 
 pub fn run_app() -> Result<(), String> {
+  let instance = SingleInstance::new("clean-paste-instance").unwrap();
+
+  if !instance.is_single() {
+    send_formatting_cleanup_signal()?;
+
+    return Ok(());
+  }
+
   let tauri_builder_default = tauri::Builder::default();
   let tauri_plugin_global_shortcut_builder = GlobalShortcutBuilder::new();
 
-  #[rustfmt::skip]
-  let tauri_plugin_global_shortcut_handler = |app: &AppHandle,
-                                              shortcut: &Shortcut,
-                                              event: ShortcutEvent| {
-      let default_shortcut = get_shortcut_hot_key(Code::KeyV);
+  let tauri_plugin_global_shortcut_handler = |app_handle: &AppHandle, shortcut: &Shortcut, event: ShortcutEvent| {
+    let default_shortcut = get_default_shortcut();
 
-      let is_correct_shortcut = shortcut == &default_shortcut;
-      let is_correct_state = event.state == ShortcutState::Pressed;
+    let is_correct_shortcut = shortcut == &default_shortcut;
+    let is_correct_state = event.state == ShortcutState::Pressed;
 
-      if is_correct_shortcut && is_correct_state {
-        let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")
-          .unwrap();
-
-        let _ = app.emit("clean_clipboard", &msg);
-
-        let notification = app.notification()
-          .builder()
-          .title("clean-paste")
-          .body("Formatting deleted!");
-
-        log_err_and_ignore!(notification.show(), "Couldn't show a notification");
-      }
-    };
+    if is_correct_shortcut && is_correct_state {
+      do_clean_clipboard(app_handle).unwrap();
+    }
+  };
 
   let tauri_plugin_global_shortcut_plugin = tauri_plugin_global_shortcut_builder
     .with_handler(tauri_plugin_global_shortcut_handler)
@@ -101,42 +149,76 @@ pub fn run_app() -> Result<(), String> {
 
   let setup = |app: &mut App| {
     #[cfg(desktop)]
-    {
-      let default_shortcut = get_shortcut_hot_key(Code::KeyV);
+    std::thread::spawn({
+      let app_handle = app.app_handle().clone();
 
+      move || {
+        let name = "clean-paste-socket";
+        let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
+
+        let listener = match ListenerOptions::new().name(ns_name).create_sync() {
+          Ok(listener) => listener,
+          Err(err) => {
+            tracing::error!("Failed to bind IPC socket: {:?}", err);
+
+            return;
+          }
+        };
+
+        tracing::info!("IPC listener started");
+
+        for conn in listener.incoming() {
+          match conn {
+            Ok(mut stream) => {
+              let mut buf = [0u8; 1];
+
+              println!("listener");
+
+              if stream.read_exact(&mut buf).is_ok() {
+                let _ = do_clean_clipboard(&app_handle);
+              }
+            }
+            Err(e) => {
+              tracing::error!("IPC connection failed: {:?}", e);
+            }
+          }
+        }
+      }
+    });
+
+    {
+      let default_shortcut = get_default_shortcut();
       let app_with_shortcut = app.global_shortcut().register(default_shortcut);
 
       log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
 
-      let quit_i = log_err_or_return!(
+      let menu_item_open = log_err_or_return!(
+        MenuItem::with_id(app, "open", "Open", true, None::<&str>),
+        "Couldn't create menu item Open"
+      );
+
+      let menu_item_quit = log_err_or_return!(
         MenuItem::with_id(app, "quit", "Quit", true, None::<&str>),
         "Couldn't create menu item Quit"
       );
 
-      let menu = log_err_or_return!(Menu::with_items(app, &[&quit_i]), "Couldn't create tray menu");
+      type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
+      type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
 
-      // todo: вернуть правильный путь, пока это только для проверки работы логирования
+      let menu_items: MenuItemsSlice = &[&menu_item_open as MenuIteSlice, &menu_item_quit as MenuIteSlice];
+
+      let menu = log_err_or_return!(Menu::with_items(app, menu_items), "Couldn't create tray menu");
+
       let icon = log_err_or_return!(
-        tauri::image::Image::from_path("icons/32x32_1.png"),
+        tauri::image::Image::from_path("icons/32x32.png"),
         "Couldn't load tray icon"
       );
 
-      fn icon_click_handler(tray: &TrayIcon<tauri::Wry>, button: MouseButton) {
+      fn icon_click_handler(tray: &TrayIcon, button: MouseButton) {
+        let app_handle = tray.app_handle();
+
         if button == MouseButton::Left {
-          let app = tray.app_handle();
-
-          #[cfg(not(target_os = "macos"))]
-          {
-            if let Some(webview_window) = app.get_webview_window("main") {
-              let _ = webview_window.show();
-              let _ = webview_window.set_focus();
-            }
-          }
-
-          #[cfg(target_os = "macos")]
-          {
-            tauri::AppHandle::show(&app.app_handle()).unwrap();
-          }
+          do_clean_clipboard(&app_handle).unwrap();
         }
       }
 
@@ -151,6 +233,21 @@ pub fn run_app() -> Result<(), String> {
           "quit" => {
             app.exit(0);
           }
+          "open" => {
+            // todo: вынести в отдельную функцию
+            #[cfg(not(target_os = "macos"))]
+            {
+              if let Some(webview_window) = app.app_handle().get_webview_window("main") {
+                let _ = webview_window.show();
+                let _ = webview_window.set_focus();
+              }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+              tauri::AppHandle::show(&app.app_handle()).unwrap();
+            }
+          }
           _ => {
             tracing::error!("Menu item {:?} not handled", event.id);
           }
@@ -161,8 +258,8 @@ pub fn run_app() -> Result<(), String> {
         .icon(icon)
         .tooltip("clean paste")
         .menu(&menu)
-        .show_menu_on_left_click(true)
-        .on_tray_icon_event(|tray: &TrayIcon<tauri::Wry>, event| {
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray: &TrayIcon<Wry>, event| {
           on_tray_icon_event(tray, event);
         })
         .on_menu_event(|app, event| {
@@ -170,6 +267,14 @@ pub fn run_app() -> Result<(), String> {
         });
 
       log_err_and_continue!(tray_icon_ready.build(app), "Couldn't create tray").unwrap();
+
+      listen_for_double_ctrl_or_cmd({
+        let app_handle = app.app_handle().clone();
+
+        move || {
+          do_clean_clipboard(&app_handle).unwrap();
+        }
+      });
 
       Ok(())
     }
@@ -180,19 +285,17 @@ pub fn run_app() -> Result<(), String> {
       WindowEvent::CloseRequested { api, .. } => {
         #[cfg(not(target_os = "macos"))]
         {
-          window.hide().unwrap();
+          log_err_and_continue!(window.hide(), "Failed to hide window").unwrap();
         }
 
         #[cfg(target_os = "macos")]
         {
-          tauri::AppHandle::hide(&window.app_handle()).unwrap();
+          log_err_and_continue!(tauri::AppHandle::hide(&window.app_handle()), "Failed to hide window").unwrap();
         }
 
         api.prevent_close();
       }
-      _ => {
-        tracing::error!("Error while preventing close");
-      }
+      _ => {}
     }
   }
 
@@ -224,8 +327,8 @@ pub fn run_app() -> Result<(), String> {
 .on_window_event(on_window_event(window, event)
 */
 
-// todo: при клике на иконку трея левой кнопкой мыши делать очистку форматирования
 // todo: добавить возможность переназначать горячие клавиши
 // todo: добавить информацию о разработчике и лицензии, ссылки
 
+// todo: при установке записывать в path путь до exe, для удобства консольного управления
 // todo: попробовать автоматическую компиляцию под разные платформы с помощью Github

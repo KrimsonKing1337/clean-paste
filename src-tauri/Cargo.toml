@@ -35,3 +35,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "std"] 
 tracing-error = "0.2"
 tracing-appender = "0.2"
 anyhow = "1.0.98"
+rdev = "0.5"
+single-instance = "0.3"
+interprocess = "2.2.3"
