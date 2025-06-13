@@ -1,7 +1,7 @@
 [package]
 name = "clean-paste"
 version = "0.1.0"
-description = "A Tauri App"
+description = "text formatting remover app"
 authors = ["you"]
 edition = "2021"
 

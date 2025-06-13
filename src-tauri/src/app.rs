@@ -122,6 +122,41 @@ fn send_cleanup_signal() -> Result<(), String> {
   Err("Couldn't connect to the IPC stream after several tryings".to_string())
 }
 
+fn spawn_socket(app_handle: AppHandle) {
+  std::thread::spawn({
+    move || {
+      let name = "clean-paste-socket";
+      let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
+
+      let listener = match ListenerOptions::new().name(ns_name).create_sync() {
+        Ok(listener) => listener,
+        Err(err) => {
+          tracing::error!("Failed to bind IPC socket: {:?}", err);
+
+          return;
+        }
+      };
+
+      tracing::info!("IPC listener started");
+
+      for conn in listener.incoming() {
+        match conn {
+          Ok(mut stream) => {
+            let mut buf = [0u8; 1];
+
+            if stream.read_exact(&mut buf).is_ok() {
+              let _ = do_clean_clipboard(&app_handle);
+            }
+          }
+          Err(e) => {
+            tracing::error!("IPC connection failed: {:?}", e);
+          }
+        }
+      }
+    }
+  });
+}
+
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
 
@@ -149,129 +184,91 @@ pub fn run_app() -> Result<(), String> {
     .with_handler(tauri_plugin_global_shortcut_handler)
     .build();
 
-  fn spawn_socket(app_handle: AppHandle) {
-    std::thread::spawn({
-      move || {
-        let name = "clean-paste-socket";
-        let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
-
-        let listener = match ListenerOptions::new().name(ns_name).create_sync() {
-          Ok(listener) => listener,
-          Err(err) => {
-            tracing::error!("Failed to bind IPC socket: {:?}", err);
-
-            return;
-          }
-        };
-
-        tracing::info!("IPC listener started");
-
-        for conn in listener.incoming() {
-          match conn {
-            Ok(mut stream) => {
-              let mut buf = [0u8; 1];
-
-              if stream.read_exact(&mut buf).is_ok() {
-                let _ = do_clean_clipboard(&app_handle);
-              }
-            }
-            Err(e) => {
-              tracing::error!("IPC connection failed: {:?}", e);
-            }
-          }
-        }
-      }
-    });
-  }
-
   let setup = |app: &mut App| {
-    #[cfg(desktop)]
     let app_handle = app.app_handle().clone();
 
-    spawn_socket(app_handle);
+    spawn_socket(app_handle.clone());
 
-    {
-      let default_shortcut = get_default_shortcut();
-      let app_with_shortcut = app.global_shortcut().register(default_shortcut);
+    let default_shortcut = get_default_shortcut();
+    let app_with_shortcut = app.global_shortcut().register(default_shortcut);
 
-      log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
+    log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
 
-      let menu_item_open = log_err_or_return!(
+    let menu_item_open = log_err_or_return!(
         MenuItem::with_id(app, "open", "Open", true, None::<&str>),
         "Couldn't create menu item Open"
       );
 
-      let menu_item_quit = log_err_or_return!(
+    let menu_item_quit = log_err_or_return!(
         MenuItem::with_id(app, "quit", "Quit", true, None::<&str>),
         "Couldn't create menu item Quit"
       );
 
-      type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
-      type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
+    type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
+    type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
 
-      let menu_items: MenuItemsSlice = &[&menu_item_open as MenuIteSlice, &menu_item_quit as MenuIteSlice];
+    let menu_items: MenuItemsSlice = &[&menu_item_open as MenuIteSlice, &menu_item_quit as MenuIteSlice];
 
-      let menu = log_err_or_return!(Menu::with_items(app, menu_items), "Couldn't create tray menu");
+    let menu = log_err_or_return!(Menu::with_items(app, menu_items), "Couldn't create tray menu");
 
-      let icon = log_err_or_return!(
+    let icon = log_err_or_return!(
         tauri::image::Image::from_path("icons/32x32.png"),
         "Couldn't load tray icon"
       );
 
-      let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
-        if let TrayIconEvent::Click { button, .. } = event {
-          if button == MouseButton::Left {
-            let app_handle = tray.app_handle();
-            let _ = do_clean_clipboard(&app_handle);
-          }
+    let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
+      if let TrayIconEvent::Click { button, .. } = event {
+        if button == MouseButton::Left {
+          let app_handle = tray.app_handle();
+          let _ = do_clean_clipboard(&app_handle);
         }
-      };
+      }
+    };
 
-      let menu_event_handler = move |app: &AppHandle, event: MenuEvent | {
-        match event.id.as_ref() {
-          "quit" => {
-            app.exit(0);
-          }
-          "open" => {
-            #[cfg(not(target_os = "macos"))]
-            {
-              if let Some(webview_window) = app.app_handle().get_webview_window("main") {
-                let _ = webview_window.show();
-                let _ = webview_window.set_focus();
-              }
-            }
-
-            #[cfg(target_os = "macos")]
-            {
-              tauri::AppHandle::show(&app.app_handle()).unwrap();
+    let menu_event_handler = move |app: &AppHandle, event: MenuEvent | {
+      match event.id.as_ref() {
+        "quit" => {
+          app.exit(0);
+        }
+        "open" => {
+          #[cfg(not(target_os = "macos"))]
+          {
+            if let Some(webview_window) = app.app_handle().get_webview_window("main") {
+              let _ = webview_window.show();
+              let _ = webview_window.set_focus();
             }
           }
-          _ => {
-            tracing::error!("Menu item {:?} not handled", event.id);
+
+          #[cfg(target_os = "macos")]
+          {
+            tauri::AppHandle::show(&app.app_handle()).unwrap();
           }
         }
-      };
-
-      let tray_icon_ready = TrayIconBuilder::new()
-        .icon(icon)
-        .tooltip("clean paste")
-        .menu(&menu)
-        .show_menu_on_left_click(false)
-        .on_tray_icon_event(tray_icon_event_handler)
-        .on_menu_event(menu_event_handler);
-
-      log_err_and_continue!(tray_icon_ready.build(app), "Couldn't create tray").unwrap();
-
-      listen_for_double_ctrl_or_cmd({
-        let app_handle = app.app_handle().clone();
-
-        move || {
-          do_clean_clipboard(&app_handle).unwrap();
+        _ => {
+          tracing::error!("Menu item {:?} not handled", event.id);
         }
-      });
+      }
+    };
 
-      Ok(())
-    }
+    let tray_icon_ready = TrayIconBuilder::new()
+      .icon(icon)
+      .tooltip("clean paste")
+      .menu(&menu)
+      .show_menu_on_left_click(false)
+      .on_tray_icon_event(tray_icon_event_handler)
+      .on_menu_event(menu_event_handler);
+
+    log_err_and_continue!(tray_icon_ready.build(app), "Couldn't create tray").unwrap();
+
+    listen_for_double_ctrl_or_cmd({
+      let app_handle = app_handle.clone();
+
+      move || {
+        do_clean_clipboard(&app_handle).unwrap();
+      }
+    });
+
+    Ok(())
   };
 
   let window_event_handler = move |window: &Window, event: &WindowEvent| {
@@ -311,5 +308,4 @@ pub fn run_app() -> Result<(), String> {
 // todo: добавить возможность переназначать горячие клавиши
 // todo: добавить информацию о разработчике и лицензии, ссылки
 
-// todo: при установке записывать в path путь до exe, для удобства консольного управления
 // todo: попробовать автоматическую компиляцию под разные платформы с помощью Github
