@@ -99,7 +99,7 @@ fn get_default_shortcut() -> Shortcut {
   }
 }
 
-fn send_formatting_cleanup_signal() -> Result<(), String> {
+fn send_cleanup_signal() -> Result<(), String> {
   let name = "clean-paste-socket";
   let ns_name = name.to_ns_name::<GenericNamespaced>().map_err(|e| e.to_string())?;
 
@@ -107,24 +107,26 @@ fn send_formatting_cleanup_signal() -> Result<(), String> {
     match Stream::connect(ns_name.clone()) {
       Ok(mut stream) => {
         stream.write_all(&[1]).map_err(|e| e.to_string())?;
+
         return Ok(());
       }
       Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
         sleep(Duration::from_millis(100));
+
         continue;
       }
       Err(e) => return Err(e.to_string()),
     }
   }
 
-  Err("Не удалось подключиться к IPC-серверу после нескольких попыток".to_string())
+  Err("Couldn't connect to the IPC stream after several tryings".to_string())
 }
 
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
 
   if !instance.is_single() {
-    send_formatting_cleanup_signal()?;
+    send_cleanup_signal()?;
 
     return Ok(());
   }
@@ -172,8 +174,6 @@ pub fn run_app() -> Result<(), String> {
             Ok(mut stream) => {
               let mut buf = [0u8; 1];
 
-              println!("listener");
-
               if stream.read_exact(&mut buf).is_ok() {
                 let _ = do_clean_clipboard(&app_handle);
               }
@@ -214,27 +214,21 @@ pub fn run_app() -> Result<(), String> {
         "Couldn't load tray icon"
       );
 
-      fn icon_click_handler(tray: &TrayIcon, button: MouseButton) {
-        let app_handle = tray.app_handle();
-
-        if button == MouseButton::Left {
-          do_clean_clipboard(&app_handle).unwrap();
-        }
-      }
-
-      fn on_tray_icon_event(tray: &TrayIcon<tauri::Wry>, event: TrayIconEvent) {
+      let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
         if let TrayIconEvent::Click { button, .. } = event {
-          icon_click_handler(&tray, button);
+          if button == MouseButton::Left {
+            let app_handle = tray.app_handle();
+            let _ = do_clean_clipboard(&app_handle);
+          }
         }
-      }
+      };
 
-      fn on_menu_event(app: &AppHandle, event: MenuEvent) {
+      let menu_event_handler = move |app: &AppHandle, event: MenuEvent | {
         match event.id.as_ref() {
           "quit" => {
             app.exit(0);
           }
           "open" => {
-            // todo: вынести в отдельную функцию
             #[cfg(not(target_os = "macos"))]
             {
               if let Some(webview_window) = app.app_handle().get_webview_window("main") {
@@ -252,19 +246,15 @@ pub fn run_app() -> Result<(), String> {
             tracing::error!("Menu item {:?} not handled", event.id);
           }
         }
-      }
+      };
 
       let tray_icon_ready = TrayIconBuilder::new()
         .icon(icon)
         .tooltip("clean paste")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_tray_icon_event(|tray: &TrayIcon<Wry>, event| {
-          on_tray_icon_event(tray, event);
-        })
-        .on_menu_event(|app, event| {
-          on_menu_event(app, event);
-        });
+        .on_tray_icon_event(tray_icon_event_handler)
+        .on_menu_event(menu_event_handler);
 
       log_err_and_continue!(tray_icon_ready.build(app), "Couldn't create tray").unwrap();
 
@@ -280,7 +270,7 @@ pub fn run_app() -> Result<(), String> {
     }
   };
 
-  fn on_window_event(window: &Window, event: &WindowEvent) {
+  let window_event_handler = move |window: &Window, event: &WindowEvent| {
     match event {
       WindowEvent::CloseRequested { api, .. } => {
         #[cfg(not(target_os = "macos"))]
@@ -297,16 +287,14 @@ pub fn run_app() -> Result<(), String> {
       }
       _ => {}
     }
-  }
+  };
 
   let tauri_ready = tauri_builder_default
     .plugin(tauri_plugin_global_shortcut_plugin)
     .plugin(tauri_plugin_notification::init())
     .invoke_handler(tauri::generate_handler![clean_clipboard])
     .setup(setup)
-    .on_window_event(|window, event| {
-      on_window_event(window, event);
-    });
+    .on_window_event(window_event_handler);
 
   log_err_or_return!(
     tauri_ready.run(tauri::generate_context!()),
@@ -315,17 +303,6 @@ pub fn run_app() -> Result<(), String> {
 
   Ok(())
 }
-
-// todo: превратить функции в замыкания
-/*
-чтобы вместо:
-.on_window_event(|window, event| {
-      on_window_event(window, event);
-    });
-
-писать:
-.on_window_event(on_window_event(window, event)
-*/
 
 // todo: добавить возможность переназначать горячие клавиши
 // todo: добавить информацию о разработчике и лицензии, ссылки
