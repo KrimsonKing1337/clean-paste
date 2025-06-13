@@ -149,11 +149,8 @@ pub fn run_app() -> Result<(), String> {
     .with_handler(tauri_plugin_global_shortcut_handler)
     .build();
 
-  let setup = |app: &mut App| {
-    #[cfg(desktop)]
+  fn spawn_socket(app_handle: AppHandle) {
     std::thread::spawn({
-      let app_handle = app.app_handle().clone();
-
       move || {
         let name = "clean-paste-socket";
         let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
@@ -185,6 +182,13 @@ pub fn run_app() -> Result<(), String> {
         }
       }
     });
+  }
+
+  let setup = |app: &mut App| {
+    #[cfg(desktop)]
+    let app_handle = app.app_handle().clone();
+
+    spawn_socket(app_handle);
 
     {
       let default_shortcut = get_default_shortcut();
