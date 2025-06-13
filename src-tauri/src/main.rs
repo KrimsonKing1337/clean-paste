@@ -1,4 +1,4 @@
-// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use tracing_error::ErrorLayer;
@@ -8,7 +8,6 @@ mod app;
 use app::run_app;
 
 mod utils;
-mod listen_for_double_ctrl_or_cmd;
 
 fn main() -> Result<(), String> {
   // rolling log file

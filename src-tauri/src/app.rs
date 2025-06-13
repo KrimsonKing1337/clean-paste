@@ -1,161 +1,60 @@
-//#region Rust uses
-use std::io::Read;
-use std::io::Write;
-use std::thread::sleep;
-use std::time::Duration;
-//#endregion Rust uses
-
 //#region tauri uses
 #[rustfmt::skip]
 use tauri::{
   // traits
-  Emitter,
-  Manager,
-
-  // types
-  Wry,
-
-  // enums
-  WindowEvent,
-
-  // structs
   App,
   AppHandle,
+
+  // enums
+  Manager,
+
+  // structs
   Window,
+  WindowEvent,
+  Wry,
 };
 //#endregion tauri uses
 
 //#region tauri plugins uses
-use tauri::menu::{MenuItem, Menu, MenuEvent, IsMenuItem};
-
-use tauri_plugin_notification::NotificationExt;
+use tauri::menu::{IsMenuItem, Menu, MenuEvent, MenuItem};
 
 #[rustfmt::skip]
 use tauri::tray::{
   // enums
   MouseButton,
-  TrayIconEvent,
+  TrayIcon,
 
   // structs
-  TrayIcon,
   TrayIconBuilder,
+  TrayIconEvent,
 };
 
 #[rustfmt::skip]
 use tauri_plugin_global_shortcut::{
   // traits
-  GlobalShortcutExt,
+  Builder as GlobalShortcutBuilder,
 
   // enums
-  Code,
-  ShortcutState,
+  GlobalShortcutExt,
 
   // structs
-  Builder as GlobalShortcutBuilder,
-  Modifiers,
   Shortcut,
   ShortcutEvent,
+  ShortcutState,
 };
 //#endregion
 
 use single_instance::SingleInstance;
-use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
 
-use crate::{listen_for_double_ctrl_or_cmd::listen_for_double_ctrl_or_cmd};
-use crate::{log_err_or_return, log_err_and_continue, log_err_and_ignore};
+use crate::{log_err_or_return, log_err_and_continue, utils};
 
-#[tauri::command]
-fn clean_clipboard() -> Result<String, String> {
-  let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-
-  let text = clipboard.get_text().map_err(|e| e.to_string())?;
-
-  clipboard.set_text(text.clone()).map_err(|e| e.to_string())?;
-
-  Ok(text)
-}
-
-fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
-  let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")?;
-
-  let _ = app_handle.emit("clean_clipboard", &msg);
-
-  let notification = app_handle
-    .notification()
-    .builder()
-    .title("clean-paste")
-    .body("Formatting deleted!");
-
-  log_err_and_ignore!(notification.show(), "Couldn't show a notification");
-
-  Ok(())
-}
-
-fn get_default_shortcut() -> Shortcut {
-  if cfg!(target_os = "macos") {
-    Shortcut::new(Some(Modifiers::META | Modifiers::ALT), Code::KeyV)
-  } else {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV)
-  }
-}
-
-fn send_cleanup_signal() -> Result<(), String> {
-  let name = "clean-paste-socket";
-  let ns_name = name.to_ns_name::<GenericNamespaced>().map_err(|e| e.to_string())?;
-
-  for _ in 0..5 {
-    match Stream::connect(ns_name.clone()) {
-      Ok(mut stream) => {
-        stream.write_all(&[1]).map_err(|e| e.to_string())?;
-
-        return Ok(());
-      }
-      Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-        sleep(Duration::from_millis(100));
-
-        continue;
-      }
-      Err(e) => return Err(e.to_string()),
-    }
-  }
-
-  Err("Couldn't connect to the IPC stream after several tryings".to_string())
-}
-
-fn spawn_socket(app_handle: AppHandle) {
-  std::thread::spawn({
-    move || {
-      let name = "clean-paste-socket";
-      let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
-
-      let listener = match ListenerOptions::new().name(ns_name).create_sync() {
-        Ok(listener) => listener,
-        Err(err) => {
-          tracing::error!("Failed to bind IPC socket: {:?}", err);
-
-          return;
-        }
-      };
-
-      tracing::info!("IPC listener started");
-
-      for conn in listener.incoming() {
-        match conn {
-          Ok(mut stream) => {
-            let mut buf = [0u8; 1];
-
-            if stream.read_exact(&mut buf).is_ok() {
-              let _ = do_clean_clipboard(&app_handle);
-            }
-          }
-          Err(e) => {
-            tracing::error!("IPC connection failed: {:?}", e);
-          }
-        }
-      }
-    }
-  });
-}
+use utils::utils::{
+  do_clean_clipboard,
+  get_default_shortcut,
+  send_cleanup_signal,
+  spawn_socket,
+  listen_for_double_ctrl_or_cmd,
+};
 
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
@@ -293,7 +192,7 @@ pub fn run_app() -> Result<(), String> {
   let tauri_ready = tauri_builder_default
     .plugin(tauri_plugin_global_shortcut_plugin)
     .plugin(tauri_plugin_notification::init())
-    .invoke_handler(tauri::generate_handler![clean_clipboard])
+    .invoke_handler(tauri::generate_handler![utils::utils::clean_clipboard])
     .setup(setup)
     .on_window_event(window_event_handler);
 
@@ -305,7 +204,7 @@ pub fn run_app() -> Result<(), String> {
   Ok(())
 }
 
-// todo: добавить возможность переназначать горячие клавиши
-// todo: добавить информацию о разработчике и лицензии, ссылки
+// todo: add the ability to reassign hotkeys
+// todo: add developer information, license, and links
 
-// todo: попробовать автоматическую компиляцию под разные платформы с помощью Github
+// todo: try automatic compilation for different platforms using Github
