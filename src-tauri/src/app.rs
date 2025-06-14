@@ -48,13 +48,7 @@ use single_instance::SingleInstance;
 
 use crate::{log_err_or_return, log_err_and_continue, utils};
 
-use utils::utils::{
-  do_clean_clipboard,
-  get_default_shortcut,
-  send_cleanup_signal,
-  spawn_socket,
-  listen_for_double_ctrl_or_cmd,
-};
+use utils::utils::{do_clean_clipboard, get_default_shortcut, send_cleanup_signal, spawn_socket, listen_for_double_key};
 
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
@@ -94,14 +88,14 @@ pub fn run_app() -> Result<(), String> {
     log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
 
     let menu_item_open = log_err_or_return!(
-        MenuItem::with_id(app, "open", "Open", true, None::<&str>),
-        "Couldn't create menu item Open"
-      );
+      MenuItem::with_id(app, "open", "Open", true, None::<&str>),
+      "Couldn't create menu item Open"
+    );
 
     let menu_item_quit = log_err_or_return!(
-        MenuItem::with_id(app, "quit", "Quit", true, None::<&str>),
-        "Couldn't create menu item Quit"
-      );
+      MenuItem::with_id(app, "quit", "Quit", true, None::<&str>),
+      "Couldn't create menu item Quit"
+    );
 
     type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
     type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
@@ -110,10 +104,9 @@ pub fn run_app() -> Result<(), String> {
 
     let menu = log_err_or_return!(Menu::with_items(app, menu_items), "Couldn't create tray menu");
 
-    let icon = log_err_or_return!(
-        tauri::image::Image::from_path("icons/32x32.png"),
-        "Couldn't load tray icon"
-      );
+    const ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
+
+    let icon = log_err_or_return!(tauri::image::Image::from_bytes(ICON_BYTES), "Couldn't load tray icon");
 
     let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
       if let TrayIconEvent::Click { button, .. } = event {
@@ -124,28 +117,26 @@ pub fn run_app() -> Result<(), String> {
       }
     };
 
-    let menu_event_handler = move |app: &AppHandle, event: MenuEvent | {
-      match event.id.as_ref() {
-        "quit" => {
-          app.exit(0);
-        }
-        "open" => {
-          #[cfg(not(target_os = "macos"))]
-          {
-            if let Some(webview_window) = app.app_handle().get_webview_window("main") {
-              let _ = webview_window.show();
-              let _ = webview_window.set_focus();
-            }
+    let menu_event_handler = move |app: &AppHandle, event: MenuEvent| match event.id.as_ref() {
+      "quit" => {
+        app.exit(0);
+      }
+      "open" => {
+        #[cfg(not(target_os = "macos"))]
+        {
+          if let Some(webview_window) = app.app_handle().get_webview_window("main") {
+            let _ = webview_window.show();
+            let _ = webview_window.set_focus();
           }
+        }
 
-          #[cfg(target_os = "macos")]
-          {
-            tauri::AppHandle::show(&app.app_handle()).unwrap();
-          }
+        #[cfg(target_os = "macos")]
+        {
+          tauri::AppHandle::show(&app.app_handle()).unwrap();
         }
-        _ => {
-          tracing::error!("Menu item {:?} not handled", event.id);
-        }
+      }
+      _ => {
+        tracing::error!("Menu item {:?} not handled", event.id);
       }
     };
 
@@ -159,7 +150,7 @@ pub fn run_app() -> Result<(), String> {
 
     log_err_and_continue!(tray_icon_ready.build(app), "Couldn't create tray").unwrap();
 
-    listen_for_double_ctrl_or_cmd({
+    listen_for_double_key({
       let app_handle = app_handle.clone();
 
       move || {
@@ -170,23 +161,21 @@ pub fn run_app() -> Result<(), String> {
     Ok(())
   };
 
-  let window_event_handler = move |window: &Window, event: &WindowEvent| {
-    match event {
-      WindowEvent::CloseRequested { api, .. } => {
-        #[cfg(not(target_os = "macos"))]
-        {
-          log_err_and_continue!(window.hide(), "Failed to hide window").unwrap();
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-          log_err_and_continue!(tauri::AppHandle::hide(&window.app_handle()), "Failed to hide window").unwrap();
-        }
-
-        api.prevent_close();
+  let window_event_handler = move |window: &Window, event: &WindowEvent| match event {
+    WindowEvent::CloseRequested { api, .. } => {
+      #[cfg(not(target_os = "macos"))]
+      {
+        log_err_and_continue!(window.hide(), "Failed to hide window").unwrap();
       }
-      _ => {}
+
+      #[cfg(target_os = "macos")]
+      {
+        log_err_and_continue!(tauri::AppHandle::hide(&window.app_handle()), "Failed to hide window").unwrap();
+      }
+
+      api.prevent_close();
     }
+    _ => {}
   };
 
   let tauri_ready = tauri_builder_default

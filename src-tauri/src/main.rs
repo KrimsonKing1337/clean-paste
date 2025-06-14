@@ -10,17 +10,21 @@ use app::run_app;
 mod utils;
 
 fn main() -> Result<(), String> {
-  // rolling log file
-  let file_appender = rolling::daily("logs", "error.log");
+  let log_dir = dirs::data_local_dir()
+    .unwrap_or_else(|| std::env::temp_dir())
+    .join("clean-paste");
+
+  std::fs::create_dir_all(&log_dir).unwrap();
+
+  let file_appender = rolling::daily(log_dir, "log");
   let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
   tracing_subscriber::registry()
       .with(ErrorLayer::default())
-      // .with(tracing_subscriber::fmt::layer().with_writer(non_blocking).compact().with_ansi(false))
       .with(tracing_subscriber::fmt::layer().with_writer(non_blocking).with_ansi(false))
       .init();
 
-  tracing::info!("Приложение запущено");
+  tracing::info!("App started successfully");
 
   // запуск приложения
   if let Err(err) = run_app() {
@@ -29,7 +33,6 @@ fn main() -> Result<(), String> {
     Err(err)?;
   }
 
-  tracing::info!("Завершаю работу, дропаю guard...");
   drop(guard);
 
   Ok(())

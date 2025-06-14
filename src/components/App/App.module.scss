@@ -1,0 +1,45 @@
+.Container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 100vh;
+  padding-top: 10vh;
+  padding-bottom: 5vh;
+}
+
+.Icon {
+  height: 82px;
+  width: 82px;
+}
+
+.Title {
+  margin-top: 5vh;
+  font-size: 25px;
+}
+
+.Notes {
+  margin-top: 5vh;
+}
+
+.SubTitle {
+  font-size: 20px;
+}
+
+.Desc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 5px;
+  margin-top: 1vh;
+}
+
+.Footer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  margin-top: auto;
+}

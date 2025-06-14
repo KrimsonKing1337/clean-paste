@@ -527,6 +527,7 @@ dependencies = [
  "anyhow",
  "arboard",
  "color-eyre",
+ "dirs",
  "enigo",
  "interprocess",
  "rdev",

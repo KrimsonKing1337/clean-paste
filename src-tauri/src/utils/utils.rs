@@ -132,7 +132,7 @@ const TARGET_KEY: Key = Key::MetaLeft;
 #[cfg(not(target_os = "macos"))]
 const TARGET_KEY: Key = Key::ControlLeft;
 
-pub fn listen_for_double_ctrl_or_cmd<F>(mut on_double_press: F)
+pub fn listen_for_double_key<F>(mut on_double_press: F)
 where F: FnMut() + Send + 'static,
 {
   let mut last_press = Instant::now() - Duration::from_secs(1);

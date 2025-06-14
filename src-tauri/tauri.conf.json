@@ -13,9 +13,9 @@
     "windows": [
       {
         "title": "clean-paste",
-        "width": 800,
+        "width": 450,
         "height": 600,
-        "visible": true
+        "visible": false
       }
     ],
     "security": {
