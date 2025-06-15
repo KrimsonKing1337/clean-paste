@@ -45,10 +45,17 @@ use tauri_plugin_global_shortcut::{
 //#endregion
 
 use single_instance::SingleInstance;
-
+use tauri::tray::MouseButtonState;
 use crate::{log_err_or_return, log_err_and_continue, utils};
 
-use utils::utils::{do_clean_clipboard, get_default_shortcut, send_cleanup_signal, spawn_socket, listen_for_double_key};
+use utils::utils::{
+  show_welcome_notification,
+  do_clean_clipboard,
+  get_default_shortcut,
+  send_cleanup_signal,
+  spawn_socket,
+  listen_for_double_key,
+};
 
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
@@ -109,8 +116,8 @@ pub fn run_app() -> Result<(), String> {
     let icon = log_err_or_return!(tauri::image::Image::from_bytes(ICON_BYTES), "Couldn't load tray icon");
 
     let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
-      if let TrayIconEvent::Click { button, .. } = event {
-        if button == MouseButton::Left {
+      if let TrayIconEvent::Click { button, button_state, .. } = event {
+        if button == MouseButton::Left && button_state == MouseButtonState::Down {
           let app_handle = tray.app_handle();
           let _ = do_clean_clipboard(&app_handle);
         }
@@ -158,6 +165,8 @@ pub fn run_app() -> Result<(), String> {
       }
     });
 
+    show_welcome_notification(&app_handle).unwrap();
+
     Ok(())
   };
 
@@ -194,6 +203,4 @@ pub fn run_app() -> Result<(), String> {
 }
 
 // todo: add the ability to reassign hotkeys
-// todo: add developer information, license, and links
-
 // todo: try automatic compilation for different platforms using Github

@@ -1,9 +1,11 @@
+import icon from '@/assets/icon.png';
+
 import styles from './App.module.scss';
 
 export const App = () => {
   return (
     <div className={styles.Container}>
-      <img className={styles.Icon} src="src/assets/icon.png" alt="" />
+      <img className={styles.Icon} src={icon} alt="" />
 
       <div className={styles.Title}>
         Simple text formatting remover app

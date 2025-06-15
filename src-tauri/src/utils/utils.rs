@@ -1,7 +1,7 @@
 //#region Rust uses
 use std::io::Read;
 use std::io::Write;
-use std::thread::sleep;
+use std::thread::{self, sleep};
 use std::time::{Duration, Instant};
 //#endregion Rust uses
 
@@ -28,7 +28,8 @@ use tauri_plugin_global_shortcut::{
   Shortcut,
 };
 
-use rdev::{EventType, Key, listen};
+use rdev::{Event, EventType, Key, listen};
+use device_query::{DeviceQuery, DeviceState, Keycode};
 use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
 
 use crate::{log_err_and_continue, log_err_and_ignore};
@@ -44,6 +45,18 @@ pub fn clean_clipboard() -> Result<String, String> {
   Ok(text)
 }
 
+pub fn show_welcome_notification(app_handle: &AppHandle) -> Result<(), String> {
+  let notification = app_handle
+    .notification()
+    .builder()
+    .title("clean-paste")
+    .body("clean-paste started!");
+
+  log_err_and_ignore!(notification.show(), "Couldn't show welcome notification");
+
+  Ok(())
+}
+
 pub fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
   let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")?;
 
@@ -55,7 +68,7 @@ pub fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
     .title("clean-paste")
     .body("Formatting deleted!");
 
-  log_err_and_ignore!(notification.show(), "Couldn't show a notification");
+  log_err_and_ignore!(notification.show(), "Couldn't show formatting deleted notification");
 
   Ok(())
 }
@@ -92,7 +105,7 @@ pub fn send_cleanup_signal() -> Result<(), String> {
 }
 
 pub fn spawn_socket(app_handle: AppHandle) {
-  std::thread::spawn({
+  thread::spawn({
     move || {
       let name = "clean-paste-socket";
       let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
@@ -126,32 +139,72 @@ pub fn spawn_socket(app_handle: AppHandle) {
   });
 }
 
-#[cfg(target_os = "macos")]
-const TARGET_KEY: Key = Key::MetaLeft;
+fn is_target_key(key: &Key) -> bool {
+  #[cfg(target_os = "macos")]
+  return *key == Key::MetaLeft || *key == Key::MetaRight;
 
-#[cfg(not(target_os = "macos"))]
-const TARGET_KEY: Key = Key::ControlLeft;
+  #[cfg(not(target_os = "macos"))]
+  return *key == Key::ControlLeft || *key == Key::ControlRight;
+}
+
+fn no_other_modifiers_pressed(target_key: &Key) -> bool {
+  let device_state = DeviceState::new();
+  let keys = device_state.get_keys();
+
+  let is_ctrl = *target_key == Key::ControlLeft || *target_key == Key::ControlRight;
+  let is_meta = *target_key == Key::MetaLeft || *target_key == Key::MetaRight;
+
+  if is_ctrl {
+    !keys.contains(&Keycode::LShift)
+      && !keys.contains(&Keycode::RShift)
+      && !keys.contains(&Keycode::LAlt)
+      && !keys.contains(&Keycode::RAlt)
+      && !keys.contains(&Keycode::LMeta)
+      && !keys.contains(&Keycode::RMeta)
+  } else if is_meta {
+    !keys.contains(&Keycode::LShift)
+      && !keys.contains(&Keycode::RShift)
+      && !keys.contains(&Keycode::LAlt)
+      && !keys.contains(&Keycode::RAlt)
+      && !keys.contains(&Keycode::LControl)
+      && !keys.contains(&Keycode::RControl)
+  } else {
+    true
+  }
+}
 
 pub fn listen_for_double_key<F>(mut on_double_press: F)
-where F: FnMut() + Send + 'static,
+where
+  F: FnMut() + Send + 'static
 {
-  let mut last_press = Instant::now() - Duration::from_secs(1);
+  thread::spawn(move || {
+    let mut last_release = Instant::now() - Duration::from_secs(1);
+    let mut awaiting_second_press = false;
 
-  std::thread::spawn(move || {
-    if let Err(err) = listen(move |event| {
-      if let EventType::KeyPress(key) = event.event_type {
-        if key == TARGET_KEY {
+    if let Err(err) = listen(move |event: Event| {
+      match event.event_type {
+        EventType::KeyRelease(key) if is_target_key(&key) && no_other_modifiers_pressed(&key) => {
           let now = Instant::now();
 
-          if now.duration_since(last_press) < Duration::from_millis(300) {
+          if now.duration_since(last_release) < Duration::from_millis(300) && awaiting_second_press {
             on_double_press();
+
+            awaiting_second_press = false;
+          } else {
+            awaiting_second_press = true;
           }
 
-          last_press = now;
-        }
+          last_release = now;
+        },
+        EventType::KeyRelease(_) if awaiting_second_press => {
+          // если во время ожидания нажата не та клавиша — сброс
+          awaiting_second_press = false;
+        },
+        
+        _ => {}
       }
     }) {
-      tracing::error!("Error in Ctrl/Cmd listener: {:?}", err);
+      tracing::error!("Error in double key listener: {:?}", err);
     }
   });
 }
