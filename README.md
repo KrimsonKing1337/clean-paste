@@ -2,16 +2,8 @@
 
 ## Simple tauri app for delete text formatting
 
-### Usage
-Run dev:
-```
-npm run tauri dev
-```
-
-Build:
-```
-npm run tauri build
-```
+### Downloads
+You can find binaries in builds folder (only Windows for now).
 
 ### Default shortcuts
 Windows/Linux: Double Ctrl or Ctrl + Shift + V\
