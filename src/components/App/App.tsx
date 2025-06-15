@@ -11,6 +11,22 @@ export const App = () => {
         Simple text formatting remover app
       </div>
 
+      <div className={styles.Shortcuts}>
+        <div className={styles.SubTitle}>
+          Hotkeys:
+        </div>
+
+        <div className={styles.Desc}>
+          <span>
+            Windows/Linux: Double Ctrl or Ctrl + Shift + V
+          </span>
+
+          <span>
+            MacOS: Double Cmd or Cmd + Shift + V
+          </span>
+        </div>
+      </div>
+
       <div className={styles.Notes}>
         <div className={styles.SubTitle}>
           It uses:
