@@ -1,8 +1,10 @@
 //#region Rust uses
 use std::io::Read;
-use std::io::Write;
+use std::io::{self, BufRead, BufReader, Write};
 use std::thread::{self, sleep};
 use std::time::{Duration, Instant};
+use std::fs::{self, OpenOptions};
+use std::path::PathBuf;
 //#endregion Rust uses
 
 //#region tauri uses
@@ -45,14 +47,22 @@ pub fn clean_clipboard() -> Result<String, String> {
   Ok(text)
 }
 
-pub fn show_welcome_notification(app_handle: &AppHandle) -> Result<(), String> {
+pub struct ShowNotification {
+  pub app_handle: AppHandle,
+  pub msg: String,
+  pub error_msg: String,
+}
+
+pub fn show_notification(params: ShowNotification) -> Result<(), String> {
+  let ShowNotification { app_handle, msg, error_msg } = params;
+
   let notification = app_handle
     .notification()
     .builder()
     .title("clean-paste")
-    .body("clean-paste started!");
+    .body(msg);
 
-  log_err_and_ignore!(notification.show(), "Couldn't show welcome notification");
+  log_err_and_ignore!(notification.show(), error_msg);
 
   Ok(())
 }
@@ -61,14 +71,14 @@ pub fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
   let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")?;
 
   let _ = app_handle.emit("clean_clipboard", &msg);
-
-  let notification = app_handle
-    .notification()
-    .builder()
-    .title("clean-paste")
-    .body("Formatting deleted!");
-
-  log_err_and_ignore!(notification.show(), "Couldn't show formatting deleted notification");
+  
+  let show_notification_params = ShowNotification {
+    app_handle: app_handle.clone(),
+    msg: "Formatting deleted!".to_string(),
+    error_msg: "Couldn't show formatting deleted notification".to_string(),
+  };
+  
+  show_notification(show_notification_params)?;
 
   Ok(())
 }
@@ -207,4 +217,50 @@ where
       tracing::error!("Error in double key listener: {:?}", err);
     }
   });
+}
+
+fn get_ready_file_path() -> PathBuf {
+  dirs::data_local_dir()
+    .unwrap_or_else(std::env::temp_dir)
+    .join("clean-paste")
+    .join("ready.txt")
+}
+
+pub fn has_flag(flag: &str) -> io::Result<bool> {
+  let path = get_ready_file_path();
+  
+  if !path.exists() {
+    return Ok(false);
+  }
+
+  let file = fs::File::open(path)?;
+  let reader = BufReader::new(file);
+
+  for line in reader.lines() {
+    if line?.trim() == flag {
+      return Ok(true);
+    }
+  }
+
+  Ok(false)
+}
+
+pub fn set_flag(flag: &str) -> io::Result<()> {
+  if has_flag(flag)? {
+    return Ok(());
+  }
+
+  let path = get_ready_file_path();
+  
+  if let Some(parent) = path.parent() {
+    fs::create_dir_all(parent)?;
+  }
+
+  let mut file = OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(path)?;
+
+  writeln!(file, "{}", flag)?;
+  Ok(())
 }

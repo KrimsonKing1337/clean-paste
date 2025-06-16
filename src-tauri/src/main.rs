@@ -8,6 +8,7 @@ mod app;
 use app::run_app;
 
 mod utils;
+mod constants;
 
 fn main() -> Result<(), String> {
   let log_dir = dirs::data_local_dir()
@@ -25,8 +26,7 @@ fn main() -> Result<(), String> {
       .init();
 
   tracing::info!("App started successfully");
-
-  // запуск приложения
+  
   if let Err(err) = run_app() {
     tracing::error!("{:?}", err);
     

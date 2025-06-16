@@ -22,6 +22,7 @@ use tauri::menu::{IsMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::{
   // enums
   MouseButton,
+  MouseButtonState,
   TrayIcon,
 
   // structs
@@ -45,17 +46,24 @@ use tauri_plugin_global_shortcut::{
 //#endregion
 
 use single_instance::SingleInstance;
-use tauri::tray::MouseButtonState;
-use crate::{log_err_or_return, log_err_and_continue, utils};
 
+use crate::{log_err_or_return, log_err_and_continue, utils, constants};
+
+#[rustfmt::skip]
 use utils::utils::{
-  show_welcome_notification,
+  ShowNotification,
+
   do_clean_clipboard,
   get_default_shortcut,
   send_cleanup_signal,
   spawn_socket,
   listen_for_double_key,
+  show_notification,
+  has_flag,
+  set_flag,
 };
+
+use constants::{FLAG_FIRST_CLOSED, FLAG_FIRST_OPENED};
 
 pub fn run_app() -> Result<(), String> {
   let instance = SingleInstance::new("clean-paste-instance").unwrap();
@@ -165,7 +173,23 @@ pub fn run_app() -> Result<(), String> {
       }
     });
 
-    show_welcome_notification(&app_handle).unwrap();
+    let show_notification_params = ShowNotification {
+      app_handle: app_handle.clone(),
+      msg: "clean-paste started!".to_string(),
+      error_msg: "Couldn't show welcome notification".to_string(),
+    };
+
+    show_notification(show_notification_params)?;
+
+    let if_first_opening = !has_flag(FLAG_FIRST_OPENED)?;
+
+    if if_first_opening {
+      let window = app.get_window("main").unwrap();
+
+      log_err_and_continue!(window.show(), "Failed to show window").unwrap();
+
+      set_flag(FLAG_FIRST_OPENED)?;
+    }
 
     Ok(())
   };
@@ -180,6 +204,20 @@ pub fn run_app() -> Result<(), String> {
       #[cfg(target_os = "macos")]
       {
         log_err_and_continue!(tauri::AppHandle::hide(&window.app_handle()), "Failed to hide window").unwrap();
+      }
+
+      let if_first_closing = !has_flag(FLAG_FIRST_CLOSED).unwrap();
+
+      if if_first_closing {
+        let show_notification_params = ShowNotification {
+          app_handle: window.app_handle().clone(),
+          msg: "clean-paste minimized in tray".to_string(),
+          error_msg: "Couldn't show notification about minimizing".to_string(),
+        };
+
+        show_notification(show_notification_params).unwrap();
+
+        set_flag(FLAG_FIRST_CLOSED).unwrap();
       }
 
       api.prevent_close();
