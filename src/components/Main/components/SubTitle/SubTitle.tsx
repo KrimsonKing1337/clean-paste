@@ -2,9 +2,15 @@ import type { PropsWithChildren } from 'react';
 
 import styles from './SubTitle.module.scss';
 
-export const SubTitle = ({ children }: PropsWithChildren) => {
+export type SummaryProps = PropsWithChildren & {
+  className?: string;
+};
+
+export const SubTitle = ({ children, className }: SummaryProps) => {
+  const subtitleClassNames = `${styles.SubTitle} ${className}`;
+
   return (
-    <div className={styles.SubTitle}>
+    <div className={subtitleClassNames}>
       {children}
     </div>
   );

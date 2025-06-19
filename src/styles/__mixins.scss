@@ -1,0 +1,7 @@
+@mixin hover-default {
+  transition: 0.3s 0s opacity ease-in-out;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}

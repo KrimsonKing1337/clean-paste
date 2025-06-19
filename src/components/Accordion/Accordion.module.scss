@@ -1,0 +1,26 @@
+@use 'src/styles/__mixins' as __mixins;
+
+.Accordion {
+  cursor: pointer;
+}
+
+.Summary {
+  border: 2px #0f0f0f solid;
+  padding: 8px;
+  width: calc(100vw - 20px);
+
+  @include __mixins.hover-default();
+}
+
+.Content {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s 0s ease;
+
+  &.isOpened {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

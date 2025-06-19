@@ -1,3 +1,6 @@
+@use 'src/styles/__mixins' as __mixins;
+
 .Notes {
   margin-top: 5vh;
+  padding: 0 10px;
 }
