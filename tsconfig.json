@@ -15,10 +15,20 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["./src/*"],
+      "src": ["./src"],
+      "src/*": ["./src/*"],
+      "@types": ["./@types"],
+      "@types/*": ["./@types/*"],
+      "assets": ["./assets"],
+      "assets/*": ["./assets/*"],
+      "components": ["./src/components"],
+      "components/*": ["./src/components/*"],
+      "styles": ["./styles"],
+      "styles/*": ["./styles/*"],
     }
   },
-  "include": ["src"],
+  "include": ["d.ts", "src/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

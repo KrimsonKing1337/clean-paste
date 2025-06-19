@@ -6,31 +6,49 @@ import react from '@vitejs/plugin-react';
 
 const host = process.env.TAURI_DEV_HOST;
 
-export default defineConfig(async () => ({
-  plugins: [react()],
-  resolve: {
-    alias: [
-      {
-        find: '@',
-        replacement: path.resolve(__dirname, 'src'),
-      },
-    ],
-  },
+export default defineConfig(async () => {
+  const hmr = {
+    protocol: 'ws',
+    host,
+    port: 1421,
+  };
 
-  clearScreen: false,
-  server: {
-    port: 1420,
-    strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-        protocol: 'ws',
-        host,
-        port: 1421,
-      }
-      : undefined,
-    watch: {
-      ignored: ['**/src-tauri/**'],
+  return {
+    plugins: [react()],
+    resolve: {
+      alias: [
+        {
+          find: 'src',
+          replacement: path.resolve(__dirname, 'src'),
+        },
+        {
+          find: '@types',
+          replacement: path.resolve(__dirname, 'src/@types'),
+        },
+        {
+          find: 'assets',
+          replacement: path.resolve(__dirname, 'src/assets'),
+        },
+        {
+          find: 'components',
+          replacement: path.resolve(__dirname, 'src/components'),
+        },
+        {
+          find: 'styles',
+          replacement: path.resolve(__dirname, 'src/styles'),
+        },
+      ],
     },
-  },
-}));
+
+    clearScreen: false,
+    server: {
+      port: 1420,
+      strictPort: true,
+      host: host || false,
+      hmr: hmr || undefined,
+      watch: {
+        ignored: ['**/src-tauri/**'],
+      },
+    },
+  }
+});
