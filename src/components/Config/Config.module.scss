@@ -1,0 +1,19 @@
+.Wrapper {
+  padding: 15px;
+}
+
+.BackButton {
+  cursor: pointer;
+}
+
+.RadioButtonsWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.RadioButton {
+  margin-top: 7px;
+}
