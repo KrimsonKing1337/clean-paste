@@ -77,16 +77,20 @@ pub fn run_app() -> Result<(), String> {
   let tauri_builder_default = tauri::Builder::default();
   let tauri_plugin_global_shortcut_builder = GlobalShortcutBuilder::new();
 
-  let tauri_plugin_global_shortcut_handler = |app_handle: &AppHandle, shortcut: &Shortcut, event: ShortcutEvent| {
-    let default_shortcut = get_default_shortcut();
+  #[rustfmt::skip]
+    let tauri_plugin_global_shortcut_handler = |
+    app_handle: &AppHandle,
+    shortcut: &Shortcut,
+    event: ShortcutEvent| {
+      let default_shortcut = get_default_shortcut();
 
-    let is_correct_shortcut = shortcut == &default_shortcut;
-    let is_correct_state = event.state == ShortcutState::Pressed;
+      let is_correct_shortcut = shortcut == &default_shortcut;
+      let is_correct_state = event.state == ShortcutState::Pressed;
 
-    if is_correct_shortcut && is_correct_state {
-      do_clean_clipboard(app_handle).unwrap();
-    }
-  };
+      if is_correct_shortcut && is_correct_state {
+          do_clean_clipboard(app_handle).unwrap();
+      }
+    };
 
   let tauri_plugin_global_shortcut_plugin = tauri_plugin_global_shortcut_builder
     .with_handler(tauri_plugin_global_shortcut_handler)
@@ -115,13 +119,22 @@ pub fn run_app() -> Result<(), String> {
     type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
     type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
 
-    let menu_items: MenuItemsSlice = &[&menu_item_open as MenuIteSlice, &menu_item_quit as MenuIteSlice];
+    let menu_items: MenuItemsSlice = &[
+      &menu_item_open as MenuIteSlice,
+      &menu_item_quit as MenuIteSlice
+    ];
 
-    let menu = log_err_or_return!(Menu::with_items(app, menu_items), "Couldn't create tray menu");
+    let menu = log_err_or_return!(
+      Menu::with_items(app, menu_items),
+      "Couldn't create tray menu"
+    );
 
     const ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
 
-    let icon = log_err_or_return!(tauri::image::Image::from_bytes(ICON_BYTES), "Couldn't load tray icon");
+    let icon = log_err_or_return!(
+      tauri::image::Image::from_bytes(ICON_BYTES),
+      "Couldn't load tray icon"
+    );
 
     let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
       if let TrayIconEvent::Click { button, button_state, .. } = event {
@@ -139,7 +152,8 @@ pub fn run_app() -> Result<(), String> {
       "open" => {
         #[cfg(not(target_os = "macos"))]
         {
-          if let Some(webview_window) = app.app_handle().get_webview_window("main") {
+        if let Some(webview_window) = app.app_handle()
+          .get_webview_window("main") {
             let _ = webview_window.show();
             let _ = webview_window.set_focus();
           }
@@ -203,7 +217,10 @@ pub fn run_app() -> Result<(), String> {
 
       #[cfg(target_os = "macos")]
       {
-        log_err_and_continue!(tauri::AppHandle::hide(&window.app_handle()), "Failed to hide window").unwrap();
+        log_err_and_continue!(
+          tauri::AppHandle::hide(&window.app_handle()),
+          "Failed to hide window"
+        ).unwrap();
       }
 
       let if_first_closing = !has_flag(FLAG_FIRST_CLOSED).unwrap();
