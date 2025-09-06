@@ -96,7 +96,7 @@ export function getNewVal(e: React.KeyboardEvent<HTMLInputElement>) {
   const noMods = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
   const purgeKey = e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Delete';
 
-  if (noMods && purgeKey) {
+  if (noMods || purgeKey) {
     return null;
   }
 
