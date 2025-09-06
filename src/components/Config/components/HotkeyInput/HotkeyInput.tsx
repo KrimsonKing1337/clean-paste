@@ -10,14 +10,14 @@ export type HotkeyInputProps = {
 
 export const HotkeyInput = ({
   value = '',
-  onChange,
+  onChange = () => {},
   placeholder = 'Press Hotkey',
 }: HotkeyInputProps) => {
   const [val, setVal] = useState(value);
 
   const setValue = (str: string) => {
     setVal(str);
-    onChange?.(str);
+    onChange(str);
   };
 
   const keyDownHandler = (e: React.KeyboardEvent<HTMLInputElement>) => {
