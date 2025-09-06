@@ -3,9 +3,9 @@ macro_rules! log_err_or_return {
   ($res:expr, $msg:expr) => {
     $res.map_err(|err| {
       let full_msg = format!("{}: {:?}", $msg, err);
-      
+
       tracing::error!("{}", full_msg);
-      
+
       full_msg
     })?
   };

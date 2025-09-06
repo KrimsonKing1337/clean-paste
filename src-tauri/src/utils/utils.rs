@@ -42,7 +42,9 @@ pub fn clean_clipboard() -> Result<String, String> {
 
   let text = clipboard.get_text().map_err(|e| e.to_string())?;
 
-  clipboard.set_text(text.clone()).map_err(|e| e.to_string())?;
+  clipboard
+    .set_text(text.clone())
+    .map_err(|e| e.to_string())?;
 
   Ok(text)
 }
@@ -54,7 +56,11 @@ pub struct ShowNotification {
 }
 
 pub fn show_notification(params: ShowNotification) -> Result<(), String> {
-  let ShowNotification { app_handle, msg, error_msg } = params;
+  let ShowNotification {
+    app_handle,
+    msg,
+    error_msg,
+  } = params;
 
   let notification = app_handle
     .notification()
@@ -71,13 +77,13 @@ pub fn do_clean_clipboard(app_handle: &AppHandle) -> Result<(), String> {
   let msg = log_err_and_continue!(clean_clipboard(), "Error while clean clipboard")?;
 
   let _ = app_handle.emit("clean_clipboard", &msg);
-  
+
   let show_notification_params = ShowNotification {
     app_handle: app_handle.clone(),
     msg: "Formatting deleted!".to_string(),
     error_msg: "Couldn't show formatting deleted notification".to_string(),
   };
-  
+
   show_notification(show_notification_params)?;
 
   Ok(())
@@ -93,7 +99,9 @@ pub fn get_default_shortcut() -> Shortcut {
 
 pub fn send_cleanup_signal() -> Result<(), String> {
   let name = "clean-paste-socket";
-  let ns_name = name.to_ns_name::<GenericNamespaced>().map_err(|e| e.to_string())?;
+  let ns_name = name
+    .to_ns_name::<GenericNamespaced>()
+    .map_err(|e| e.to_string())?;
 
   for _ in 0..5 {
     match Stream::connect(ns_name.clone()) {
@@ -118,7 +126,9 @@ pub fn spawn_socket(app_handle: AppHandle) {
   thread::spawn({
     move || {
       let name = "clean-paste-socket";
-      let ns_name = name.to_ns_name::<GenericNamespaced>().expect("invalid socket name");
+      let ns_name = name
+        .to_ns_name::<GenericNamespaced>()
+        .expect("invalid socket name");
 
       let listener = match ListenerOptions::new().name(ns_name).create_sync() {
         Ok(listener) => listener,
@@ -185,7 +195,7 @@ fn no_other_modifiers_pressed(target_key: &Key) -> bool {
 
 pub fn listen_for_double_key<F>(mut on_double_press: F)
 where
-  F: FnMut() + Send + 'static
+  F: FnMut() + Send + 'static,
 {
   thread::spawn(move || {
     let mut last_release = Instant::now() - Duration::from_secs(1);
@@ -205,12 +215,12 @@ where
           }
 
           last_release = now;
-        },
+        }
         EventType::KeyRelease(_) if awaiting_second_press => {
           // если во время ожидания нажата не та клавиша — сброс
           awaiting_second_press = false;
-        },
-        
+        }
+
         _ => {}
       }
     }) {
@@ -228,7 +238,7 @@ fn get_ready_file_path() -> PathBuf {
 
 pub fn has_flag(flag: &str) -> io::Result<bool> {
   let path = get_ready_file_path();
-  
+
   if !path.exists() {
     return Ok(false);
   }
@@ -251,15 +261,12 @@ pub fn set_flag(flag: &str) -> io::Result<()> {
   }
 
   let path = get_ready_file_path();
-  
+
   if let Some(parent) = path.parent() {
     fs::create_dir_all(parent)?;
   }
 
-  let mut file = OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open(path)?;
+  let mut file = OpenOptions::new().create(true).append(true).open(path)?;
 
   writeln!(file, "{}", flag)?;
   Ok(())

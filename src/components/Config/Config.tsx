@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router';
 
 import { RadioButton } from 'components/RadioButton';
 
+import { HotkeyInput } from './components';
+
 import { doublePressOptions } from './utils.ts';
 
 import styles from './Config.module.scss';
@@ -37,7 +39,7 @@ export const Config = () => {
 
       Make your shortcut (default is Ctrl + Shift + V):
 
-      <input placeholder="Start to make shortcut" value="Ctrl + Shift + V" />
+      <HotkeyInput />
     </div>
   );
 };

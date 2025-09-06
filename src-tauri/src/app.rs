@@ -43,6 +43,9 @@ use tauri_plugin_global_shortcut::{
   ShortcutEvent,
   ShortcutState,
 };
+
+#[rustfmt::skip]
+use tauri_plugin_os;
 //#endregion
 
 use single_instance::SingleInstance;
@@ -119,10 +122,7 @@ pub fn run_app() -> Result<(), String> {
     type MenuIteSlice<'a> = &'a dyn IsMenuItem<Wry>;
     type MenuItemsSlice<'a> = &'a [MenuIteSlice<'a>];
 
-    let menu_items: MenuItemsSlice = &[
-      &menu_item_open as MenuIteSlice,
-      &menu_item_quit as MenuIteSlice
-    ];
+    let menu_items: MenuItemsSlice = &[&menu_item_open as MenuIteSlice, &menu_item_quit as MenuIteSlice];
 
     let menu = log_err_or_return!(
       Menu::with_items(app, menu_items),
@@ -137,7 +137,12 @@ pub fn run_app() -> Result<(), String> {
     );
 
     let tray_icon_event_handler = move |tray: &TrayIcon<Wry>, event: TrayIconEvent| {
-      if let TrayIconEvent::Click { button, button_state, .. } = event {
+      if let TrayIconEvent::Click {
+        button,
+        button_state,
+        ..
+      } = event
+      {
         if button == MouseButton::Left && button_state == MouseButtonState::Down {
           let app_handle = tray.app_handle();
           let _ = do_clean_clipboard(&app_handle);
@@ -152,8 +157,7 @@ pub fn run_app() -> Result<(), String> {
       "open" => {
         #[cfg(not(target_os = "macos"))]
         {
-        if let Some(webview_window) = app.app_handle()
-          .get_webview_window("main") {
+          if let Some(webview_window) = app.app_handle().get_webview_window("main") {
             let _ = webview_window.show();
             let _ = webview_window.set_focus();
           }
@@ -209,7 +213,10 @@ pub fn run_app() -> Result<(), String> {
   };
 
   let window_event_handler = move |window: &Window, event: &WindowEvent| match event {
-    WindowEvent::CloseRequested { api, .. } => {
+    WindowEvent::CloseRequested {
+      api,
+      ..
+    } => {
       #[cfg(not(target_os = "macos"))]
       {
         log_err_and_continue!(window.hide(), "Failed to hide window").unwrap();
@@ -220,7 +227,8 @@ pub fn run_app() -> Result<(), String> {
         log_err_and_continue!(
           tauri::AppHandle::hide(&window.app_handle()),
           "Failed to hide window"
-        ).unwrap();
+        )
+        .unwrap();
       }
 
       let if_first_closing = !has_flag(FLAG_FIRST_CLOSED).unwrap();
@@ -245,6 +253,7 @@ pub fn run_app() -> Result<(), String> {
   let tauri_ready = tauri_builder_default
     .plugin(tauri_plugin_global_shortcut_plugin)
     .plugin(tauri_plugin_notification::init())
+    .plugin(tauri_plugin_os::init())
     .invoke_handler(tauri::generate_handler![utils::utils::clean_clipboard])
     .setup(setup)
     .on_window_event(window_event_handler);

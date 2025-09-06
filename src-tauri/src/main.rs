@@ -7,8 +7,8 @@ use tracing_appender::rolling;
 mod app;
 use app::run_app;
 
-mod utils;
 mod constants;
+mod utils;
 
 fn main() -> Result<(), String> {
   let log_dir = dirs::data_local_dir()
@@ -21,15 +21,19 @@ fn main() -> Result<(), String> {
   let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
   tracing_subscriber::registry()
-      .with(ErrorLayer::default())
-      .with(tracing_subscriber::fmt::layer().with_writer(non_blocking).with_ansi(false))
-      .init();
+    .with(ErrorLayer::default())
+    .with(
+      tracing_subscriber::fmt::layer()
+        .with_writer(non_blocking)
+        .with_ansi(false),
+    )
+    .init();
 
   tracing::info!("App started successfully");
-  
+
   if let Err(err) = run_app() {
     tracing::error!("{:?}", err);
-    
+
     Err(err)?;
   }
 
