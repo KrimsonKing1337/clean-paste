@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router';
 
+import ConfigIcon from 'assets/icons/i-config.svg?react';
+
 import {
   Header,
   Shortcuts,
@@ -20,12 +22,12 @@ export const Main = () => {
     <div className={styles.Main}>
       <Header />
       <Shortcuts />
-      <Notes />
 
-      <div onClick={clickHandler}>
-        Go to Config
+      <div className={styles.ConfigIconWrapper} onClick={clickHandler}>
+        <ConfigIcon />
       </div>
 
+      <Notes />
       <Footer />
     </div>
   );

@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router';
 
-import { RadioButton } from 'components/RadioButton';
+import CrossIcon from 'assets/icons/i-cross.svg?react';
 
-import { HotkeyInput } from './components';
+import { RadioButton, SubTitle } from 'components';
+
+import { HotkeyInput, Label } from './components';
 
 import { doublePressOptions } from './utils.ts';
 
@@ -17,13 +19,17 @@ export const Config = () => {
 
   return (
     <div className={styles.Wrapper}>
-      Config
-
       <div className={styles.BackButton} onClick={clickHandler}>
-        Go back to Main
+        <CrossIcon />
       </div>
 
-      Choose double press hotkey:
+      <SubTitle className={styles.SubTitle}>
+        Config
+      </SubTitle>
+
+      <Label>
+        Set double press hotkey (default is Ctrl/Cmd):
+      </Label>
 
       <div className={styles.RadioButtonsWrapper}>
         {doublePressOptions.map((optionCur) => {
@@ -37,7 +43,9 @@ export const Config = () => {
         })}
       </div>
 
-      Make your shortcut (default is Ctrl + Shift + V):
+      <Label>
+        Set your hotkey (default is Ctrl/Cmd + Shift + V):
+      </Label>
 
       <HotkeyInput />
     </div>

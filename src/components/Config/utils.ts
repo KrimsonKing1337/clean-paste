@@ -5,14 +5,11 @@ export type DoublePressOption = {
 
 export const doublePressOptions: DoublePressOption[] = [
   {
-    label: 'Disable',
+    label: 'None',
   },
   {
     label: 'Double Ctrl',
     isDefault: true, // todo: брать из настроек пользователя. если ничего нет - тогда использовать это
-  },
-  {
-    label: 'Double Shift',
   },
   {
     label: 'Double Shift',

@@ -1,9 +1,23 @@
+@use 'src/styles/__mixins' as __mixins;
+
 .Wrapper {
   padding: 15px;
 }
 
+.SubTitle {
+  margin-bottom: 5vh;
+}
+
 .BackButton {
+  position: absolute;
+  z-index: 1;
+  top: 2vh;
+  right: 2vh;
+  width: 5vh;
+  height: 5vh;
   cursor: pointer;
+
+  @include __mixins.hover-default;
 }
 
 .RadioButtonsWrapper {
@@ -11,9 +25,9 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 .RadioButton {
-  margin-top: 7px;
+  margin-top: 3px;
 }

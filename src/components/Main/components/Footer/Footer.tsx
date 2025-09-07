@@ -1,4 +1,6 @@
-import { SubTitle, Desc } from '../';
+import { SubTitle } from 'components';
+
+import { Desc } from '../';
 
 import styles from './Footer.module.scss';
 

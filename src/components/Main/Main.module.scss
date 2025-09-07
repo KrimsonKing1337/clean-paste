@@ -1,3 +1,5 @@
+@use 'src/styles/__mixins' as __mixins;
+
 .Main {
   display: flex;
   flex-direction: column;
@@ -7,4 +9,16 @@
   height: 100vh;
   padding-top: 10vh;
   padding-bottom: 5vh;
+}
+
+.ConfigIconWrapper {
+  position: absolute;
+  z-index: 1;
+  top: 2vh;
+  right: 2vh;
+  width: 5vh;
+  height: 5vh;
+  cursor: pointer;
+
+  @include __mixins.hover-default;
 }

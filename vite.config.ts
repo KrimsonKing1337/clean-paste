@@ -3,6 +3,7 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -14,7 +15,10 @@ export default defineConfig(async () => {
   };
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      svgr(),
+    ],
     resolve: {
       alias: [
         {

@@ -1,6 +1,6 @@
-import { SubTitle, Desc } from '../';
+import { Accordion, Link, SubTitle } from 'components';
 
-import { Accordion, Link } from 'components';
+import { Desc } from '../';
 
 import styles from './Notes.module.scss';
 

@@ -1,4 +1,3 @@
-export * from './SubTitle';
 export * from './Header';
 export * from './Notes';
 export * from './Shortcuts';

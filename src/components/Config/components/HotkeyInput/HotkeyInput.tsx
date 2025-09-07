@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { getNewVal } from './utils.ts';
 
+import styles from './HotkeyInput.module.scss';
+
 export type HotkeyInputProps = {
   value?: string;
   onChange?: (hotKey: string) => void;
@@ -11,7 +13,7 @@ export type HotkeyInputProps = {
 export const HotkeyInput = ({
   value = '',
   onChange = () => {},
-  placeholder = 'Press Hotkey',
+  placeholder = 'Press hotkey',
 }: HotkeyInputProps) => {
   const [val, setVal] = useState(value);
 
@@ -32,11 +34,11 @@ export const HotkeyInput = ({
 
   return (
     <input
+      className={styles.Input}
       value={val}
       placeholder={placeholder}
       readOnly
       onKeyDown={keyDownHandler}
-      style={{ width: 280, padding: 8 }}
     />
   );
 };

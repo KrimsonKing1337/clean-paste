@@ -193,20 +193,19 @@ fn no_other_modifiers_pressed(target_key: &Key) -> bool {
   }
 }
 
-pub fn listen_for_double_key<F>(mut on_double_press: F)
-where
-  F: FnMut() + Send + 'static,
-{
+pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send + 'static, {
   thread::spawn(move || {
     let mut last_release = Instant::now() - Duration::from_secs(1);
     let mut awaiting_second_press = false;
 
     if let Err(err) = listen(move |event: Event| {
       match event.event_type {
-        EventType::KeyRelease(key) if is_target_key(&key) && no_other_modifiers_pressed(&key) => {
+        EventType::KeyRelease(key)
+        if is_target_key(&key) && no_other_modifiers_pressed(&key) => {
           let now = Instant::now();
 
-          if now.duration_since(last_release) < Duration::from_millis(300) && awaiting_second_press {
+          if now.duration_since(last_release) < Duration::from_millis(300)
+            && awaiting_second_press {
             on_double_press();
 
             awaiting_second_press = false;
