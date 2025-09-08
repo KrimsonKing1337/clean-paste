@@ -1,4 +1,4 @@
-import { type } from '@tauri-apps/plugin-os';
+import { getPlatformType } from 'utils';
 
 export function getKeyName(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.code.startsWith('Key')) {
@@ -72,7 +72,7 @@ export type Labels = {
 };
 
 export function getLabels(): Labels {
-  const platformType = type();
+  const platformType = getPlatformType();
   const isMac = platformType === 'macos';
 
   if (isMac) {

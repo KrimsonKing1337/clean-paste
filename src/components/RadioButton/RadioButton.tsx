@@ -9,7 +9,7 @@ export type RadioButtonProps = PropsWithChildren & {
   className?: string;
   id?: string;
   name: string;
-  isDefault?: boolean;
+  checked?: boolean;
 
   onChange?: () => void;
 };
@@ -19,7 +19,7 @@ export const RadioButton = ({
   className = '',
   id,
   name,
-  isDefault = false,
+  checked = false,
 
   onChange = () => {}
   }: RadioButtonProps) => {
@@ -36,7 +36,7 @@ export const RadioButton = ({
         id={idValue}
         name={name}
         type="radio"
-        defaultChecked={isDefault}
+        checked={checked}
         className={styles.Input}
 
         onChange={onChange}

@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -9,9 +7,11 @@ import CrossIcon from 'assets/icons/i-cross.svg?react';
 
 import { RadioButton, SubTitle } from 'components';
 
+import { saveSettings, loadSettings } from 'utils';
+
 import { HotkeyInput, Label } from './components';
 
-import { doublePressOptions } from './utils.ts';
+import { doublePressOptions, getCheckedDoubleHotkey } from './utils.ts';
 
 import styles from './Config.module.scss';
 
@@ -26,34 +26,19 @@ export const Config = () => {
   const [settings, setSettings] = useState<Settings>({});
 
   useAsyncEffect(async () => {
-    const settingsCurrentJson = await invoke('load_settings') as unknown as string;
-    const settingsCurrent = JSON.parse(settingsCurrentJson);
+    const settingsCurrent = await loadSettings();
 
     setSettings(settingsCurrent);
   }, []);
 
   const radioButtonChangeHandler = async (value: string) => {
-    const settingsNewValue = {
-      ...settings,
-      radioHotkey: value,
-    };
-
-    const settingsJson = JSON.stringify(settingsNewValue);
-
-    await invoke('save_settings', { content: settingsJson });
+    const settingsNewValue = await saveSettings({ radioHotkey: value });
 
     setSettings(settingsNewValue);
   };
 
   const inputChangeHandler = async (value: string) => {
-    const settingsNewValue = {
-      ...settings,
-      hotkey: value,
-    };
-
-    const settingsJson = JSON.stringify(settingsNewValue);
-
-    await invoke('save_settings', { content: settingsJson });
+    const settingsNewValue = await saveSettings({ hotkey: value });
 
     setSettings(settingsNewValue);
   };
@@ -78,18 +63,19 @@ export const Config = () => {
 
       <div className={styles.RadioButtonsWrapper}>
         {doublePressOptions.map((optionCur) => {
-          // todo: isDefault определяется плагином. и задаётся только если значения в settings нет
-          const { label, isDefault } = optionCur;
+          const checkedValue = getCheckedDoubleHotkey(settings);
+
+          const checked = checkedValue === optionCur;
 
           return (
             <RadioButton
-              key={label}
+              key={optionCur}
               name="doublePress"
-              isDefault={isDefault}
+              checked={checked}
               className={styles.RadioButton}
-              onChange={() => radioButtonChangeHandler(label)}
+              onChange={() => radioButtonChangeHandler(optionCur)}
             >
-              {label}
+              {optionCur}
             </RadioButton>
           );
         })}

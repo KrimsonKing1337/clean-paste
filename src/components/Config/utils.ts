@@ -1,29 +1,18 @@
-export type DoublePressOption = {
-  label: string;
-  isDefault?: boolean;
-};
+import { type Settings, getPlatformType } from 'utils';
 
-export const doublePressOptions: DoublePressOption[] = [
-  {
-    label: 'None',
-  },
-  {
-    label: 'Double Ctrl',
-    isDefault: true, // todo: брать из настроек пользователя. если ничего нет - тогда использовать это
-  },
-  {
-    label: 'Double Shift',
-  },
-  {
-    label: 'Double CapsLock',
-  },
-  {
-    label: 'Double Alt',
-  },
-  {
-    label: 'Double Opt',
-  },
-  {
-    label: 'Double Cmd',
-  },
+export const doublePressOptions = [
+  'None',
+  'Double Ctrl',
+  'Double Shift',
+  'Double Alt',
+  'Double Opt',
+  'Double Cmd',
 ];
+
+export function getCheckedDoubleHotkey(settings: Settings) {
+  const platformType = getPlatformType();
+
+  const defaultHotkey = platformType === 'macos' ? 'Double Cmd' : 'Double Ctrl';
+
+  return settings.radioHotkey ? settings.radioHotkey : defaultHotkey;
+}
