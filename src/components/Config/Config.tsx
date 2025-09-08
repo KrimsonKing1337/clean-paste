@@ -7,11 +7,11 @@ import CrossIcon from 'assets/icons/i-cross.svg?react';
 
 import { RadioButton, SubTitle } from 'components';
 
-import { saveSettings, loadSettings } from 'utils';
+import { saveSettings, loadSettings, getCmdOrCtrl } from 'utils';
 
 import { HotkeyInput, Label } from './components';
 
-import { doublePressOptions, getCheckedDoubleHotkey } from './utils.ts';
+import { doublePressOptions, getCheckedDoubleHotkey } from './utils';
 
 import styles from './Config.module.scss';
 
@@ -47,6 +47,8 @@ export const Config = () => {
     navigate('/');
   };
 
+  const defaultDoubleHotkey = getCmdOrCtrl();
+
   return (
     <div className={styles.Wrapper}>
       <div className={styles.BackButton} onClick={clickHandler}>
@@ -58,7 +60,7 @@ export const Config = () => {
       </SubTitle>
 
       <Label>
-        Set double press hotkey (default is Ctrl/Cmd):
+        Set double press hotkey (default is {defaultDoubleHotkey}):
       </Label>
 
       <div className={styles.RadioButtonsWrapper}>
@@ -82,7 +84,7 @@ export const Config = () => {
       </div>
 
       <Label>
-        Set your hotkey (default is Ctrl/Cmd + Shift + V):
+        Set your hotkey (default is {defaultDoubleHotkey} + Shift + V):
       </Label>
 
       <HotkeyInput value={settings.hotkey} onChange={inputChangeHandler} />

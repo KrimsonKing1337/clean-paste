@@ -1,24 +1,38 @@
+import { useState } from 'react';
+
+import { useAsyncEffect } from 'use-async-effect';
+
 import { SubTitle } from 'components';
 
+import { type Settings, loadSettings } from 'utils';
+
 import { Desc } from '../';
+
+import { getLabelForShortcuts } from './utils.ts';
 
 import styles from './Shortcuts.module.scss';
 
 export const Shortcuts = () => {
+  const [settings, setSettings] = useState<Settings>({});
+
+  useAsyncEffect(async () => {
+    const settingsCurrent = await loadSettings();
+
+    console.log('___ settingsCurrent', settingsCurrent);
+
+    setSettings(settingsCurrent);
+  }, []);
+
+  const labelForShortcuts = getLabelForShortcuts(settings);
+
   return (
     <div className={styles.Shortcuts}>
       <SubTitle>
-        Default hotkeys:
+        Hotkeys:
       </SubTitle>
 
       <Desc>
-        <span>
-          Windows/Linux: Double Ctrl and Ctrl + Shift + V
-        </span>
-
-        <span>
-          MacOS: Double Cmd and Cmd + Shift + V
-        </span>
+        {labelForShortcuts}
       </Desc>
     </div>
   );
