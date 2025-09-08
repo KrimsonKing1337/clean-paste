@@ -254,7 +254,12 @@ pub fn run_app() -> Result<(), String> {
     .plugin(tauri_plugin_global_shortcut_plugin)
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_os::init())
-    .invoke_handler(tauri::generate_handler![utils::utils::clean_clipboard])
+    .invoke_handler(tauri::generate_handler![
+      utils::utils::clean_clipboard,
+      utils::utils::save_settings,
+      utils::utils::load_settings,
+      utils::utils::settings_path_cmd,
+    ])
     .setup(setup)
     .on_window_event(window_event_handler);
 

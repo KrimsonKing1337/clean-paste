@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use tauri::{
   // traits
   Emitter,
+  Manager,
 
   // structs
   AppHandle,
@@ -269,4 +270,58 @@ pub fn set_flag(flag: &str) -> io::Result<()> {
 
   writeln!(file, "{}", flag)?;
   Ok(())
+}
+
+fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
+  // Конфиг-директория, кроссплатформенно:
+  // Windows: %APPDATA%\<identifier>\config
+  // macOS:   ~/Library/Application Support/<identifier>/config
+  // Linux:   ~/.config/<identifier>/config
+  let dir = app
+    .path()
+    .app_config_dir()
+    .map_err(|e| format!("cannot resolve app_config_dir: {e}"))?;
+
+  fs::create_dir_all(&dir).map_err(|e| format!("create_dir_all: {e}"))?;
+
+  Ok(dir.join("settings.json"))
+}
+
+#[tauri::command]
+pub fn save_settings(app: AppHandle, content: String) -> Result<(), String> {
+  let path = settings_path(&app)?;
+  // атомарная запись: сначала во временный файл, затем rename
+  let tmp = path.with_extension("json.tmp");
+
+  {
+    let mut f = fs::File::create(&tmp).map_err(|e| format!("create tmp: {e}"))?;
+
+    f.write_all(content.as_bytes()).map_err(|e| format!("write: {e}"))?;
+    f.sync_all().ok();
+  }
+
+  fs::rename(&tmp, &path).map_err(|e| format!("rename: {e}"))?;
+
+  Ok(())
+}
+
+#[tauri::command]
+pub fn load_settings(app: AppHandle) -> Result<Option<String>, String> {
+  let path = settings_path(&app)?;
+
+  if !path.exists() {
+    return Ok(None);
+  }
+
+  let bytes = fs::read(&path).map_err(|e| format!("read: {e}"))?;
+  let str = String::from_utf8(bytes).map_err(|e| format!("utf8: {e}"))?;
+
+  Ok(Some(str))
+}
+
+#[tauri::command]
+pub fn settings_path_cmd(app: AppHandle) -> Result<String, String> {
+  let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+
+  Ok(dir.join("settings.json").display().to_string())
 }

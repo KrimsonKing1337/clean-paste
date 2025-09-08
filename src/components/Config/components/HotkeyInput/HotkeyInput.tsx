@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getNewVal } from './utils.ts';
 
@@ -12,10 +12,14 @@ export type HotkeyInputProps = {
 
 export const HotkeyInput = ({
   value = '',
-  onChange = () => {},
   placeholder = 'Press hotkey',
+  onChange = () => {},
 }: HotkeyInputProps) => {
   const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    setVal(value);
+  }, [value]);
 
   const setValue = (str: string) => {
     setVal(str);
