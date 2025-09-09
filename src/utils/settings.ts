@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 export type Settings = {
   hotkey?: string;
-  radioHotkey?: string;
+  doubleHotkey?: string;
 }
 
 export function getSettingsDirPath(): Promise<string> {

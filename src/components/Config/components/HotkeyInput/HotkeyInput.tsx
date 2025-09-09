@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { getNewVal } from './utils.ts';
+import { getLabelByAccel, getValues } from './utils';
 
 import styles from './HotkeyInput.module.scss';
 
@@ -18,22 +18,27 @@ export const HotkeyInput = ({
   const [val, setVal] = useState(value);
 
   useEffect(() => {
-    setVal(value);
-  }, [value]);
+    const val = getLabelByAccel(value);
 
-  const setValue = (str: string) => {
-    setVal(str);
-    onChange(str);
-  };
+    setVal(val);
+  }, [value]);
 
   const keyDownHandler = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const newVal = getNewVal(e);
-    const val = newVal ? newVal.val : '';
+    const values = getValues(e);
 
-    setValue(val);
+    if (!values) {
+      return;
+    }
+
+    const { ui, accel } = values;
+
+    const val = ui ?? '';
+
+    setVal(val);
+    onChange(accel);
   };
 
   return (

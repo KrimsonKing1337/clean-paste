@@ -18,8 +18,6 @@ export const Shortcuts = () => {
   useAsyncEffect(async () => {
     const settingsCurrent = await loadSettings();
 
-    console.log('___ settingsCurrent', settingsCurrent);
-
     setSettings(settingsCurrent);
   }, []);
 

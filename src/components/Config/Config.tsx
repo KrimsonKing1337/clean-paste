@@ -7,18 +7,13 @@ import CrossIcon from 'assets/icons/i-cross.svg?react';
 
 import { RadioButton, SubTitle } from 'components';
 
-import { saveSettings, loadSettings, getCmdOrCtrl } from 'utils';
+import { saveSettings, loadSettings, getCmdOrCtrl, Settings } from 'utils';
 
 import { HotkeyInput, Label } from './components';
 
 import { doublePressOptions, getCheckedDoubleHotkey } from './utils';
 
 import styles from './Config.module.scss';
-
-type Settings = {
-  hotkey?: string;
-  radioHotkey?: string;
-}
 
 export const Config = () => {
   const navigate = useNavigate();
@@ -32,7 +27,7 @@ export const Config = () => {
   }, []);
 
   const radioButtonChangeHandler = async (value: string) => {
-    const settingsNewValue = await saveSettings({ radioHotkey: value });
+    const settingsNewValue = await saveSettings({ doubleHotkey: value });
 
     setSettings(settingsNewValue);
   };
@@ -65,19 +60,21 @@ export const Config = () => {
 
       <div className={styles.RadioButtonsWrapper}>
         {doublePressOptions.map((optionCur) => {
-          const checkedValue = getCheckedDoubleHotkey(settings);
+          const { label, value } = optionCur;
 
-          const checked = checkedValue === optionCur;
+          const valueFromSettings = getCheckedDoubleHotkey(settings);
+
+          const checked = valueFromSettings.value === value;
 
           return (
             <RadioButton
-              key={optionCur}
+              key={value}
               name="doublePress"
               checked={checked}
               className={styles.RadioButton}
-              onChange={() => radioButtonChangeHandler(optionCur)}
+              onChange={() => radioButtonChangeHandler(value)}
             >
-              {optionCur}
+              {label}
             </RadioButton>
           );
         })}
