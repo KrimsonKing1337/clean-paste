@@ -86,14 +86,16 @@ pub fn run_app() -> Result<(), String> {
     app_handle: &AppHandle,
     shortcut: &Shortcut,
     event: ShortcutEvent| {
-      let current_shortcut = utils::utils::get_current_shortcut()
-        .unwrap_or_else(|| get_default_shortcut());
+      if event.state != ShortcutState::Pressed {
+        return;
+      }
 
-      let is_correct_shortcut = *shortcut == current_shortcut;
-      let is_correct_state = event.state == ShortcutState::Pressed;
-
-      if is_correct_shortcut && is_correct_state {
-          do_clean_clipboard(app_handle).unwrap();
+      if let Some(current) = utils::utils::get_current_shortcut() {
+        if &current == shortcut {
+          if let Err(e) = utils::utils::do_clean_clipboard(app_handle) {
+            tracing::error!("Failed to clean clipboard from shortcut: {}", e);
+          }
+        }
       }
     };
 
@@ -233,7 +235,7 @@ pub fn run_app() -> Result<(), String> {
           tauri::AppHandle::hide(&window.app_handle()),
           "Failed to hide window"
         )
-        .unwrap();
+          .unwrap();
       }
 
       let if_first_closing = !has_flag(FLAG_FIRST_CLOSED).unwrap();
@@ -278,5 +280,4 @@ pub fn run_app() -> Result<(), String> {
   Ok(())
 }
 
-// todo: add the ability to reassign hotkeys
 // todo: try automatic compilation for different platforms using Github

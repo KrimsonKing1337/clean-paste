@@ -49,6 +49,8 @@ export const Config = () => {
   };
 
   const saveButtonClickHandler = async () => {
+    console.log(settings);
+
     await registerNewShortcut(settings.hotkey as string, settings.doubleHotkey as string);
     await saveSettings(settings);
   }

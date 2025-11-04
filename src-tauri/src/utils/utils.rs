@@ -259,7 +259,6 @@ pub fn set_flag(flag: &str) -> io::Result<()> {
 }
 
 fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
-  // Конфиг-директория, кроссплатформенно:
   // Windows: %APPDATA%\<identifier>\config
   // macOS:   ~/Library/Application Support/<identifier>/config
   // Linux:   ~/.config/<identifier>/config
@@ -271,24 +270,6 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
   fs::create_dir_all(&dir).map_err(|e| format!("create_dir_all: {e}"))?;
 
   Ok(dir.join("settings.json"))
-}
-
-static CURRENT_SHORTCUT: OnceLock<Mutex<Shortcut>> = OnceLock::new();
-
-pub fn init_current_shortcut(shortcut: Shortcut) {
-  let _ = CURRENT_SHORTCUT.set(Mutex::new(shortcut));
-}
-
-pub fn set_current_shortcut(shortcut: Shortcut) {
-  if let Some(m) = CURRENT_SHORTCUT.get() {
-    *m.lock().unwrap() = shortcut;
-  }
-}
-
-pub fn get_current_shortcut() -> Option<Shortcut> {
-  CURRENT_SHORTCUT
-    .get()
-    .map(|m| *m.lock().unwrap())
 }
 
 fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
@@ -388,6 +369,7 @@ fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
 
     _ => {
       println!("Unknown key in hotkey: {}", key_part);
+
       return None;
     }
   };
@@ -417,7 +399,6 @@ fn parse_double_hotkey_str(s: &str) -> Option<Option<DoubleKey>> {
 #[tauri::command]
 pub fn save_settings(app: AppHandle, content: String) -> Result<(), String> {
   let path = settings_path(&app)?;
-  // атомарная запись: сначала во временный файл, затем rename
   let tmp = path.with_extension("json.tmp");
 
   {
@@ -459,21 +440,36 @@ pub fn new_shortcut(
   hotkey: String,
   double_hotkey: String,
 ) -> Result<(), String> {
-  let new_shortcut = parse_hotkey_str(&hotkey).ok_or("cannot parse hotkey")?;
+  // ---------- 1. ОБЫЧНЫЙ ШОРТКАТ ----------
+  let hotkey_trimmed = hotkey.trim();
 
-  if let Some(old) = get_current_shortcut() {
-    let _ = app.global_shortcut().unregister(old);
+  if hotkey_trimmed.is_empty() {
+    // снять старый, если он был
+    if let Some(old) = get_current_shortcut() {
+      if let Err(e) = app.global_shortcut().unregister(old) {
+        tracing::error!("Failed to unregister old shortcut: {}", e);
+      }
+    }
+
+    set_current_shortcut(None);
+  } else {
+    let new_shortcut = parse_hotkey_str(hotkey_trimmed)
+      .ok_or_else(|| "cannot parse hotkey".to_string())?;
+
+    if let Some(old) = get_current_shortcut() {
+      let _ = app.global_shortcut().unregister(old);
+    }
+
+    app.global_shortcut()
+      .register(new_shortcut)
+      .map_err(|e| e.to_string())?;
+
+    set_current_shortcut(Some(new_shortcut));
   }
 
-  app.global_shortcut()
-    .register(new_shortcut)
-    .map_err(|e| e.to_string())?;
-
-  set_current_shortcut(new_shortcut);
-
+  // ---------- 2. ДВОЙНОЙ ШОРТКАТ ----------
   if let Some(parsed_double) = parse_double_hotkey_str(&double_hotkey) {
     set_current_double_key(parsed_double);
-    println!("double hotkey set to: {:?}", parsed_double);
   } else {
     return Err("cannot parse double hotkey".to_string());
   }
@@ -497,4 +493,22 @@ pub fn get_current_double_key() -> Option<DoubleKey> {
   CURRENT_DOUBLE_KEY
     .get()
     .and_then(|m| *m.lock().unwrap())
+}
+
+static CURRENT_SHORTCUT: OnceLock<Mutex<Option<Shortcut>>> = OnceLock::new();
+
+pub fn init_current_shortcut(shortcut: Shortcut) {
+  let _ = CURRENT_SHORTCUT.set(Mutex::new(Some(shortcut)));
+}
+
+pub fn set_current_shortcut(shortcut: Option<Shortcut>) {
+  if let Some(m) = CURRENT_SHORTCUT.get() {
+    *m.lock().unwrap() = shortcut;
+  }
+}
+
+pub fn get_current_shortcut() -> Option<Shortcut> {
+  CURRENT_SHORTCUT
+    .get()
+    .and_then(|m| m.lock().unwrap().clone())
 }

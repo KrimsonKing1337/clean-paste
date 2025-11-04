@@ -45,6 +45,7 @@ export const HotkeyInput = ({
 
   const clearClickHandler = () => {
     setVal('');
+    onChange('');
   }
 
   return (
