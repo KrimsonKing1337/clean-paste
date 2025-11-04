@@ -64,7 +64,6 @@ use utils::utils::{
   show_notification,
   has_flag,
   set_flag,
-  new_shortcut,
 };
 
 use constants::{FLAG_FIRST_CLOSED, FLAG_FIRST_OPENED};

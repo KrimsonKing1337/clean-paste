@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 import { type Settings, getPlatformType } from 'utils';
 
 export type DoublePressOption = {
@@ -61,4 +63,11 @@ export function getCheckedDoubleHotkey(settings: Settings) {
   const doubleHotKeyOptionByValue = getDoubleHotKeyOptionByValue(settings.doubleHotkey);
 
   return  doubleHotKeyOptionByValue ? doubleHotKeyOptionByValue : defaultHotkey;
+}
+
+export function registerNewShortcut(hotkey: string, doubleHotkey: string) {
+  return invoke('new_shortcut', {
+    hotkey,
+    doubleHotkey,
+  });
 }

@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -13,16 +11,9 @@ import { saveSettings, loadSettings, getCmdOrCtrl, Settings } from 'utils';
 
 import { HotkeyInput, Label } from './components';
 
-import { doublePressOptions, getCheckedDoubleHotkey } from './utils';
+import { doublePressOptions, getCheckedDoubleHotkey, registerNewShortcut } from './utils';
 
 import styles from './Config.module.scss';
-
-function sendToRust(hotkey: string, doubleHotkey: string) {
-  return invoke('new_shortcut', {
-    hotkey,
-    doubleHotkey,
-  });
-}
 
 export const Config = () => {
   const navigate = useNavigate();
@@ -36,15 +27,21 @@ export const Config = () => {
   }, []);
 
   const radioButtonChangeHandler = async (value: string) => {
-    const settingsNewValue = await saveSettings({ doubleHotkey: value });
+    const newValue = {
+      ...settings,
+      doubleHotkey: value,
+    };
 
-    setSettings(settingsNewValue);
+    setSettings(newValue);
   };
 
   const inputChangeHandler = async (value: string) => {
-    const settingsNewValue = await saveSettings({ hotkey: value });
+    const newValue = {
+      ...settings,
+      hotkey: value,
+    };
 
-    setSettings(settingsNewValue);
+    setSettings(newValue);
   };
 
   const backButtonClickHandler = () => {
@@ -52,7 +49,8 @@ export const Config = () => {
   };
 
   const saveButtonClickHandler = async () => {
-    await sendToRust(settings.hotkey as string, settings.doubleHotkey as string);
+    await registerNewShortcut(settings.hotkey as string, settings.doubleHotkey as string);
+    await saveSettings(settings);
   }
 
   const defaultDoubleHotkey = getCmdOrCtrl();
