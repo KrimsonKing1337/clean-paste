@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import CrossIcon from 'assets/icons/i-cross.svg?react';
+
 import { getLabelByAccel, getValues } from './utils';
 
 import styles from './HotkeyInput.module.scss';
@@ -41,13 +43,23 @@ export const HotkeyInput = ({
     onChange(accel);
   };
 
+  const clearClickHandler = () => {
+    setVal('');
+  }
+
   return (
-    <input
-      className={styles.Input}
-      value={val}
-      placeholder={placeholder}
-      readOnly
-      onKeyDown={keyDownHandler}
-    />
+    <div className={styles.Wrapper}>
+      <input
+        className={styles.Input}
+        value={val}
+        placeholder={placeholder}
+        readOnly
+        onKeyDown={keyDownHandler}
+      />
+
+      <div className={styles.Clear} onClick={clearClickHandler}>
+        <CrossIcon />
+      </div>
+    </div>
   );
 };

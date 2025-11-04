@@ -1,5 +1,26 @@
+@use 'styles/__mixins' as __mixins;
+
+.Wrapper {
+  position: relative;
+  width: 280px;
+}
+
 .Input {
   margin-top: 5px;
-  width: 280px;
+  width: 100%;
   padding: 8px;
+}
+
+.Clear {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  right: 5px;
+  margin: auto;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+
+  @include __mixins.hover-default;
 }

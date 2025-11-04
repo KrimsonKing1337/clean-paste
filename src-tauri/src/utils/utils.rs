@@ -34,7 +34,6 @@ use tauri_plugin_global_shortcut::{
 };
 
 use rdev::{Event, EventType, Key, listen};
-use device_query::{DeviceQuery, DeviceState, Keycode};
 use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
 
 use crate::{log_err_and_continue, log_err_and_ignore};
@@ -168,40 +167,6 @@ pub fn spawn_socket(app_handle: AppHandle) {
       }
     }
   });
-}
-
-fn is_target_key(key: &Key) -> bool {
-  #[cfg(target_os = "macos")]
-  return *key == Key::MetaLeft || *key == Key::MetaRight;
-
-  #[cfg(not(target_os = "macos"))]
-  return *key == Key::ControlLeft || *key == Key::ControlRight;
-}
-
-fn no_other_modifiers_pressed(target_key: &Key) -> bool {
-  let device_state = DeviceState::new();
-  let keys = device_state.get_keys();
-
-  let is_ctrl = *target_key == Key::ControlLeft || *target_key == Key::ControlRight;
-  let is_meta = *target_key == Key::MetaLeft || *target_key == Key::MetaRight;
-
-  if is_ctrl {
-    !keys.contains(&Keycode::LShift)
-      && !keys.contains(&Keycode::RShift)
-      && !keys.contains(&Keycode::LAlt)
-      && !keys.contains(&Keycode::RAlt)
-      && !keys.contains(&Keycode::LMeta)
-      && !keys.contains(&Keycode::RMeta)
-  } else if is_meta {
-    !keys.contains(&Keycode::LShift)
-      && !keys.contains(&Keycode::RShift)
-      && !keys.contains(&Keycode::LAlt)
-      && !keys.contains(&Keycode::RAlt)
-      && !keys.contains(&Keycode::LControl)
-      && !keys.contains(&Keycode::RControl)
-  } else {
-    true
-  }
 }
 
 fn is_selected_double_key(selected: DoubleKey, key: Key) -> bool {
