@@ -5,6 +5,7 @@ use std::thread::{self, sleep};
 use std::time::{Duration, Instant};
 use std::fs::{self, OpenOptions};
 use std::path::PathBuf;
+use std::sync::{OnceLock, Mutex};
 //#endregion Rust uses
 
 //#region tauri uses
@@ -20,6 +21,7 @@ use tauri::{
 //#endregion tauri uses
 
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 #[rustfmt::skip]
 use tauri_plugin_global_shortcut::{
@@ -287,6 +289,85 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
   Ok(dir.join("settings.json"))
 }
 
+static CURRENT_SHORTCUT: OnceLock<Mutex<Shortcut>> = OnceLock::new();
+
+pub fn init_current_shortcut(shortcut: Shortcut) {
+  let _ = CURRENT_SHORTCUT.set(Mutex::new(shortcut));
+}
+
+pub fn set_current_shortcut(shortcut: Shortcut) {
+  if let Some(m) = CURRENT_SHORTCUT.get() {
+    *m.lock().unwrap() = shortcut;
+  }
+}
+
+pub fn get_current_shortcut() -> Option<Shortcut> {
+  CURRENT_SHORTCUT
+    .get()
+    .map(|m| *m.lock().unwrap())
+}
+
+fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
+  let parts: Vec<_> = s
+    .split('+')
+    .map(|p| p.trim())
+    .filter(|p| !p.is_empty())
+    .collect();
+
+  if parts.is_empty() {
+    return None;
+  }
+
+  // последний элемент считаем клавишей
+  let key_part = parts.last().unwrap().to_uppercase();
+
+  let mut mods = Modifiers::empty();
+
+  for m in &parts[..parts.len() - 1] {
+    match m.to_lowercase().as_str() {
+      "ctrl" | "control" => mods |= Modifiers::CONTROL,
+      "shift" => mods |= Modifiers::SHIFT,
+      "alt" => mods |= Modifiers::ALT,
+      "cmd" | "command" | "meta" | "super" => mods |= Modifiers::META,
+      _ => {}
+    }
+  }
+
+  let code = match key_part.as_str() {
+    "A" => Code::KeyA,
+    "B" => Code::KeyB,
+    "C" => Code::KeyC,
+    "D" => Code::KeyD,
+    "E" => Code::KeyE,
+    "F" => Code::KeyF,
+    "G" => Code::KeyG,
+    "H" => Code::KeyH,
+    "I" => Code::KeyI,
+    "J" => Code::KeyJ,
+    "K" => Code::KeyK,
+    "L" => Code::KeyL,
+    "M" => Code::KeyM,
+    "N" => Code::KeyN,
+    "O" => Code::KeyO,
+    "P" => Code::KeyP,
+    "Q" => Code::KeyQ,
+    "R" => Code::KeyR,
+    "S" => Code::KeyS,
+    "T" => Code::KeyT,
+    "U" => Code::KeyU,
+    "V" => Code::KeyV,
+    "W" => Code::KeyW,
+    "X" => Code::KeyX,
+    "Y" => Code::KeyY,
+    "Z" => Code::KeyZ,
+    _ => return None,
+  };
+
+  Some(Shortcut::new(Some(mods), code))
+}
+
+
+
 #[tauri::command]
 pub fn save_settings(app: AppHandle, content: String) -> Result<(), String> {
   let path = settings_path(&app)?;
@@ -327,6 +408,21 @@ pub fn settings_path_cmd(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn new_shortcut(hotkey: String, double_hotkey: String) {
-  println!("hotkey: {} double hotkey: {}", hotkey, double_hotkey);
+pub fn new_shortcut(app: AppHandle, hotkey: String, _double_hotkey: String) -> Result<(), String> {
+  let shortcut = parse_hotkey_str(&hotkey)
+    .ok_or_else(|| "Cannot parse hotkey".to_string())?;
+
+  app
+    .global_shortcut()
+    .unregister_all()
+    .map_err(|e| e.to_string())?;
+
+  app
+    .global_shortcut()
+    .register(shortcut)
+    .map_err(|e| e.to_string())?;
+
+  set_current_shortcut(shortcut);
+
+  Ok(())
 }

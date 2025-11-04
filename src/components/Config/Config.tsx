@@ -17,13 +17,11 @@ import { doublePressOptions, getCheckedDoubleHotkey } from './utils';
 
 import styles from './Config.module.scss';
 
-async function sendToRust(hotkey: string, doubleHotkey: string) {
-  const res = await invoke<string>('new_shortcut', {
+function sendToRust(hotkey: string, doubleHotkey: string) {
+  return invoke('new_shortcut', {
     hotkey,
-    doubleHotkey
+    doubleHotkey,
   });
-
-  console.log('Ответ из Rust:', res);
 }
 
 export const Config = () => {

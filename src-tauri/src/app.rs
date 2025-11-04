@@ -86,9 +86,10 @@ pub fn run_app() -> Result<(), String> {
     app_handle: &AppHandle,
     shortcut: &Shortcut,
     event: ShortcutEvent| {
-      let default_shortcut = get_default_shortcut();
+      let current_shortcut = utils::utils::get_current_shortcut()
+        .unwrap_or_else(|| get_default_shortcut());
 
-      let is_correct_shortcut = shortcut == &default_shortcut;
+      let is_correct_shortcut = *shortcut == current_shortcut;
       let is_correct_state = event.state == ShortcutState::Pressed;
 
       if is_correct_shortcut && is_correct_state {
@@ -107,6 +108,8 @@ pub fn run_app() -> Result<(), String> {
 
     let default_shortcut = get_default_shortcut();
     let app_with_shortcut = app.global_shortcut().register(default_shortcut);
+
+    utils::utils::init_current_shortcut(default_shortcut);
 
     log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
 
