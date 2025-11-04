@@ -55,6 +55,7 @@ use crate::{log_err_or_return, log_err_and_continue, utils, constants};
 #[rustfmt::skip]
 use utils::utils::{
   ShowNotification,
+  DoubleKey,
 
   do_clean_clipboard,
   get_default_shortcut,
@@ -109,6 +110,7 @@ pub fn run_app() -> Result<(), String> {
     let app_with_shortcut = app.global_shortcut().register(default_shortcut);
 
     utils::utils::init_current_shortcut(default_shortcut);
+    utils::utils::init_current_double_key(Some(DoubleKey::Ctrl));
 
     log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
 

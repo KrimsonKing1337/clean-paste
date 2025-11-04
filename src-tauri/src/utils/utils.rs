@@ -39,6 +39,14 @@ use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions,
 
 use crate::{log_err_and_continue, log_err_and_ignore};
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum DoubleKey {
+  Ctrl,
+  Shift,
+  Alt,
+  Meta, // Cmd / Command / Super
+}
+
 #[tauri::command]
 pub fn clean_clipboard() -> Result<String, String> {
   let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
@@ -196,19 +204,35 @@ fn no_other_modifiers_pressed(target_key: &Key) -> bool {
   }
 }
 
-pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send + 'static, {
+fn is_selected_double_key(selected: DoubleKey, key: Key) -> bool {
+  match selected {
+    DoubleKey::Ctrl => matches!(key, Key::ControlLeft | Key::ControlRight),
+    DoubleKey::Shift => matches!(key, Key::ShiftLeft | Key::ShiftRight),
+    DoubleKey::Alt => matches!(key, Key::Alt | Key::AltGr),
+    DoubleKey::Meta => matches!(key, Key::MetaLeft | Key::MetaRight),
+  }
+}
+
+pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send + 'static {
   thread::spawn(move || {
     let mut last_release = Instant::now() - Duration::from_secs(1);
     let mut awaiting_second_press = false;
 
     if let Err(err) = listen(move |event: Event| {
-      match event.event_type {
-        EventType::KeyRelease(key)
-        if is_target_key(&key) && no_other_modifiers_pressed(&key) => {
-          let now = Instant::now();
+      let current = get_current_double_key();
 
-          if now.duration_since(last_release) < Duration::from_millis(300)
-            && awaiting_second_press {
+      if current.is_none() {
+        return;
+      }
+
+      let current = current.unwrap();
+
+      match event.event_type {
+        EventType::KeyRelease(key) if is_selected_double_key(current, key) => {
+          let now = Instant::now();
+          let diff = now.duration_since(last_release);
+
+          if awaiting_second_press && diff < Duration::from_millis(300) {
             on_double_press();
 
             awaiting_second_press = false;
@@ -218,15 +242,10 @@ pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send 
 
           last_release = now;
         }
-        EventType::KeyRelease(_) if awaiting_second_press => {
-          // если во время ожидания нажата не та клавиша — сброс
-          awaiting_second_press = false;
-        }
-
         _ => {}
       }
     }) {
-      tracing::error!("Error in double key listener: {:?}", err);
+      eprintln!("Error in double key listener: {:?}", err);
     }
   });
 }
@@ -318,7 +337,6 @@ fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
     return None;
   }
 
-  // последний элемент считаем клавишей
   let key_part = parts.last().unwrap().to_uppercase();
 
   let mut mods = Modifiers::empty();
@@ -360,13 +378,76 @@ fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
     "X" => Code::KeyX,
     "Y" => Code::KeyY,
     "Z" => Code::KeyZ,
-    _ => return None,
+
+    "0" => Code::Digit0,
+    "1" => Code::Digit1,
+    "2" => Code::Digit2,
+    "3" => Code::Digit3,
+    "4" => Code::Digit4,
+    "5" => Code::Digit5,
+    "6" => Code::Digit6,
+    "7" => Code::Digit7,
+    "8" => Code::Digit8,
+    "9" => Code::Digit9,
+
+    "F1" => Code::F1,
+    "F2" => Code::F2,
+    "F3" => Code::F3,
+    "F4" => Code::F4,
+    "F5" => Code::F5,
+    "F6" => Code::F6,
+    "F7" => Code::F7,
+    "F8" => Code::F8,
+    "F9" => Code::F9,
+    "F10" => Code::F10,
+    "F11" => Code::F11,
+    "F12" => Code::F12,
+
+    "HOME" => Code::Home,
+    "END" => Code::End,
+    "INSERT" | "INS" => Code::Insert,
+    "DELETE" | "DEL" => Code::Delete,
+    "PAGEUP" | "PAGE UP" | "PGUP" => Code::PageUp,
+    "PAGEDOWN" | "PAGE DOWN" | "PGDN" => Code::PageDown,
+
+    "ARROWUP" | "UP" => Code::ArrowUp,
+    "ARROWDOWN" | "DOWN" => Code::ArrowDown,
+    "ARROWLEFT" | "LEFT" => Code::ArrowLeft,
+    "ARROWRIGHT" | "RIGHT" => Code::ArrowRight,
+
+    "SPACE" => Code::Space,
+    "TAB" => Code::Tab,
+    "ENTER" | "RETURN" => Code::Enter,
+    "ESC" | "ESCAPE" => Code::Escape,
+    "BACKSPACE" => Code::Backspace,
+
+    _ => {
+      println!("Unknown key in hotkey: {}", key_part);
+      return None;
+    }
   };
 
   Some(Shortcut::new(Some(mods), code))
 }
 
+fn parse_double_hotkey_str(s: &str) -> Option<Option<DoubleKey>> {
+  let trimmed = s.trim();
 
+  if trimmed.eq_ignore_ascii_case("none") || trimmed.is_empty() {
+    return Some(None);
+  }
+
+  let key = match trimmed.to_lowercase().as_str() {
+    "ctrl" | "control" => DoubleKey::Ctrl,
+    "shift" => DoubleKey::Shift,
+    "alt" => DoubleKey::Alt,
+    "opt" | "option" => DoubleKey::Alt,
+    "cmd" | "command" | "meta" | "super" => DoubleKey::Meta,
+    _ => return None, // couldn't parse
+  };
+
+  Some(Some(key))
+}
 
 #[tauri::command]
 pub fn save_settings(app: AppHandle, content: String) -> Result<(), String> {
@@ -408,21 +489,47 @@ pub fn settings_path_cmd(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn new_shortcut(app: AppHandle, hotkey: String, _double_hotkey: String) -> Result<(), String> {
-  let shortcut = parse_hotkey_str(&hotkey)
-    .ok_or_else(|| "Cannot parse hotkey".to_string())?;
+pub fn new_shortcut(
+  app: AppHandle,
+  hotkey: String,
+  double_hotkey: String,
+) -> Result<(), String> {
+  let new_shortcut = parse_hotkey_str(&hotkey).ok_or("cannot parse hotkey")?;
 
-  app
-    .global_shortcut()
-    .unregister_all()
+  if let Some(old) = get_current_shortcut() {
+    let _ = app.global_shortcut().unregister(old);
+  }
+
+  app.global_shortcut()
+    .register(new_shortcut)
     .map_err(|e| e.to_string())?;
 
-  app
-    .global_shortcut()
-    .register(shortcut)
-    .map_err(|e| e.to_string())?;
+  set_current_shortcut(new_shortcut);
 
-  set_current_shortcut(shortcut);
+  if let Some(parsed_double) = parse_double_hotkey_str(&double_hotkey) {
+    set_current_double_key(parsed_double);
+    println!("double hotkey set to: {:?}", parsed_double);
+  } else {
+    return Err("cannot parse double hotkey".to_string());
+  }
 
   Ok(())
+}
+
+static CURRENT_DOUBLE_KEY: OnceLock<Mutex<Option<DoubleKey>>> = OnceLock::new();
+
+pub fn init_current_double_key(key: Option<DoubleKey>) {
+  let _ = CURRENT_DOUBLE_KEY.set(Mutex::new(key));
+}
+
+pub fn set_current_double_key(key: Option<DoubleKey>) {
+  if let Some(m) = CURRENT_DOUBLE_KEY.get() {
+    *m.lock().unwrap() = key;
+  }
+}
+
+pub fn get_current_double_key() -> Option<DoubleKey> {
+  CURRENT_DOUBLE_KEY
+    .get()
+    .and_then(|m| *m.lock().unwrap())
 }
