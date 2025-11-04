@@ -6,6 +6,7 @@
 
 .SubTitle {
   margin-bottom: 5vh;
+  text-align: center;
 }
 
 .BackButton {
@@ -30,4 +31,15 @@
 
 .RadioButton {
   margin-top: 3px;
+}
+
+.SaveButton {
+  display: block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background-color: #0d6efd;
+  margin: 31px auto 0 auto;
+  color: #fff;
+
+  @include __mixins.hover-default;
 }

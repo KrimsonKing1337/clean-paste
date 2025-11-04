@@ -325,3 +325,8 @@ pub fn settings_path_cmd(app: AppHandle) -> Result<String, String> {
 
   Ok(dir.join("settings.json").display().to_string())
 }
+
+#[tauri::command]
+pub fn new_shortcut(hotkey: String, double_hotkey: String) {
+  println!("hotkey: {} double hotkey: {}", hotkey, double_hotkey);
+}

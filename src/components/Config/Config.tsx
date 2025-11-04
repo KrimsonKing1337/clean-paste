@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -14,6 +16,15 @@ import { HotkeyInput, Label } from './components';
 import { doublePressOptions, getCheckedDoubleHotkey } from './utils';
 
 import styles from './Config.module.scss';
+
+async function sendToRust(hotkey: string, doubleHotkey: string) {
+  const res = await invoke<string>('new_shortcut', {
+    hotkey,
+    doubleHotkey
+  });
+
+  console.log('Ответ из Rust:', res);
+}
 
 export const Config = () => {
   const navigate = useNavigate();
@@ -38,15 +49,19 @@ export const Config = () => {
     setSettings(settingsNewValue);
   };
 
-  const clickHandler = () => {
+  const backButtonClickHandler = () => {
     navigate('/');
   };
+
+  const saveButtonClickHandler = async () => {
+    await sendToRust(settings.hotkey as string, settings.doubleHotkey as string);
+  }
 
   const defaultDoubleHotkey = getCmdOrCtrl();
 
   return (
     <div className={styles.Wrapper}>
-      <div className={styles.BackButton} onClick={clickHandler}>
+      <div className={styles.BackButton} onClick={backButtonClickHandler}>
         <CrossIcon />
       </div>
 
@@ -85,6 +100,10 @@ export const Config = () => {
       </Label>
 
       <HotkeyInput value={settings.hotkey} onChange={inputChangeHandler} />
+
+      <button className={styles.SaveButton} onClick={saveButtonClickHandler}>
+        Save changes
+      </button>
     </div>
   );
 };

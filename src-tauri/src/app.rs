@@ -64,6 +64,7 @@ use utils::utils::{
   show_notification,
   has_flag,
   set_flag,
+  new_shortcut,
 };
 
 use constants::{FLAG_FIRST_CLOSED, FLAG_FIRST_OPENED};
@@ -255,6 +256,8 @@ pub fn run_app() -> Result<(), String> {
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_os::init())
     .invoke_handler(tauri::generate_handler![
+      utils::utils::new_shortcut,
+
       utils::utils::clean_clipboard,
       utils::utils::save_settings,
       utils::utils::load_settings,
