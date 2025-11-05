@@ -46,6 +46,16 @@ pub(crate) enum DoubleKey {
   Meta, // Cmd / Command / Super
 }
 
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct SettingsData {
+  #[serde(rename = "hotkey")]
+  pub hotkey: Option<String>,
+  #[serde(rename = "doubleHotkey")]
+  pub doubleHotkey: Option<String>,
+}
+
 #[tauri::command]
 pub fn clean_clipboard() -> Result<String, String> {
   let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
@@ -273,7 +283,9 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn parse_hotkey_str(s: &str) -> Option<Shortcut> {
-  let parts: Vec<_> = s
+  let cleaned = s.replace(" +", "+").replace("+ ", "+");
+
+  let parts: Vec<_> = cleaned
     .split('+')
     .map(|p| p.trim())
     .filter(|p| !p.is_empty())
@@ -440,11 +452,10 @@ pub fn new_shortcut(
   hotkey: String,
   double_hotkey: String,
 ) -> Result<(), String> {
-  // ---------- 1. ОБЫЧНЫЙ ШОРТКАТ ----------
+  // regular shortcut
   let hotkey_trimmed = hotkey.trim();
 
   if hotkey_trimmed.is_empty() {
-    // снять старый, если он был
     if let Some(old) = get_current_shortcut() {
       if let Err(e) = app.global_shortcut().unregister(old) {
         tracing::error!("Failed to unregister old shortcut: {}", e);
@@ -467,7 +478,7 @@ pub fn new_shortcut(
     set_current_shortcut(Some(new_shortcut));
   }
 
-  // ---------- 2. ДВОЙНОЙ ШОРТКАТ ----------
+  // double shortcut
   if let Some(parsed_double) = parse_double_hotkey_str(&double_hotkey) {
     set_current_double_key(parsed_double);
   } else {
@@ -511,4 +522,41 @@ pub fn get_current_shortcut() -> Option<Shortcut> {
   CURRENT_SHORTCUT
     .get()
     .and_then(|m| m.lock().unwrap().clone())
+}
+
+// применяет настройки, если строка — валидный JSON
+pub fn apply_settings_from_str(app: &AppHandle, content: &str) -> Result<(), String> {
+  let parsed: SettingsData = serde_json::from_str(content)
+    .map_err(|e| format!("cannot parse settings.json: {e}"))?;
+
+  // regular shortcut
+  if let Some(hotkey_str) = parsed.hotkey.as_deref() {
+    let hotkey_str = hotkey_str.trim();
+
+    if hotkey_str.is_empty() {
+      if let Some(old) = get_current_shortcut() {
+        let _ = app.global_shortcut().unregister(old);
+      }
+
+      set_current_shortcut(None);
+    } else if let Some(sc) = parse_hotkey_str(hotkey_str) {
+      if let Some(old) = get_current_shortcut() {
+        let _ = app.global_shortcut().unregister(old);
+      }
+
+      app.global_shortcut()
+        .register(sc)
+        .map_err(|e| format!("register from settings: {e}"))?;
+      set_current_shortcut(Some(sc));
+    }
+  }
+
+  // double shortcut
+  if let Some(double_str) = parsed.doubleHotkey.as_deref() {
+    if let Some(parsed_double) = parse_double_hotkey_str(double_str) {
+      set_current_double_key(parsed_double);
+    }
+  }
+
+  Ok(())
 }

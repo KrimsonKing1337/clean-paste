@@ -62,7 +62,7 @@ export function getCheckedDoubleHotkey(settings: Settings) {
 
   const doubleHotKeyOptionByValue = getDoubleHotKeyOptionByValue(settings.doubleHotkey);
 
-  return  doubleHotKeyOptionByValue ? doubleHotKeyOptionByValue : defaultHotkey;
+  return doubleHotKeyOptionByValue ? doubleHotKeyOptionByValue : defaultHotkey;
 }
 
 export function registerNewShortcut(hotkey: string, doubleHotkey: string) {

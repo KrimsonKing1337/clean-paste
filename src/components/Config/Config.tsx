@@ -23,6 +23,8 @@ export const Config = () => {
   useAsyncEffect(async () => {
     const settingsCurrent = await loadSettings();
 
+    console.log(settingsCurrent);
+
     setSettings(settingsCurrent);
   }, []);
 
@@ -49,8 +51,6 @@ export const Config = () => {
   };
 
   const saveButtonClickHandler = async () => {
-    console.log(settings);
-
     await registerNewShortcut(settings.hotkey as string, settings.doubleHotkey as string);
     await saveSettings(settings);
   }

@@ -16,7 +16,13 @@ use tauri::{
 //#endregion tauri uses
 
 //#region tauri plugins uses
-use tauri::menu::{IsMenuItem, Menu, MenuEvent, MenuItem};
+use tauri::menu::{
+  Menu,
+  MenuEvent,
+  MenuItem,
+
+  IsMenuItem
+};
 
 #[rustfmt::skip]
 use tauri::tray::{
@@ -55,10 +61,8 @@ use crate::{log_err_or_return, log_err_and_continue, utils, constants};
 #[rustfmt::skip]
 use utils::utils::{
   ShowNotification,
-  DoubleKey,
 
   do_clean_clipboard,
-  get_default_shortcut,
   send_cleanup_signal,
   spawn_socket,
   listen_for_double_key,
@@ -82,7 +86,7 @@ pub fn run_app() -> Result<(), String> {
   let tauri_plugin_global_shortcut_builder = GlobalShortcutBuilder::new();
 
   #[rustfmt::skip]
-    let tauri_plugin_global_shortcut_handler = |
+  let tauri_plugin_global_shortcut_handler = |
     app_handle: &AppHandle,
     shortcut: &Shortcut,
     event: ShortcutEvent| {
@@ -93,7 +97,7 @@ pub fn run_app() -> Result<(), String> {
       if let Some(current) = utils::utils::get_current_shortcut() {
         if &current == shortcut {
           if let Err(e) = utils::utils::do_clean_clipboard(app_handle) {
-            tracing::error!("Failed to clean clipboard from shortcut: {}", e);
+            tracing::error!("Failed to clean clipboard: {}", e);
           }
         }
       }
@@ -108,13 +112,31 @@ pub fn run_app() -> Result<(), String> {
 
     spawn_socket(app_handle.clone());
 
-    let default_shortcut = get_default_shortcut();
-    let app_with_shortcut = app.global_shortcut().register(default_shortcut);
-
+    let default_shortcut = utils::utils::get_default_shortcut();
     utils::utils::init_current_shortcut(default_shortcut);
-    utils::utils::init_current_double_key(Some(DoubleKey::Ctrl));
+    utils::utils::init_current_double_key(Some(utils::utils::DoubleKey::Ctrl));
 
-    log_err_or_return!(app_with_shortcut, "Couldn't register the shortcut");
+    let settings_str = utils::utils::load_settings(app_handle.clone()).ok().flatten();
+
+    if let Some(content) = settings_str {
+      if let Err(e) = utils::utils::apply_settings_from_str(&app_handle, &content) {
+        tracing::error!("Failed to apply settings from file: {}", e);
+      }
+    }
+
+    if utils::utils::get_current_shortcut().is_none() {
+      let default_shortcut = utils::utils::get_default_shortcut();
+
+      if let Err(e) = app.global_shortcut().register(default_shortcut) {
+        tracing::error!("Couldn't register default shortcut: {}", e);
+      } else {
+        utils::utils::init_current_shortcut(default_shortcut);
+      }
+    }
+
+    if utils::utils::get_current_double_key().is_none() {
+      utils::utils::init_current_double_key(Some(utils::utils::DoubleKey::Ctrl));
+    }
 
     let menu_item_open = log_err_or_return!(
       MenuItem::with_id(app, "open", "Open", true, None::<&str>),
