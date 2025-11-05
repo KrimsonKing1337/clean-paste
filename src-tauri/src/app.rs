@@ -283,6 +283,7 @@ pub fn run_app() -> Result<(), String> {
     .plugin(tauri_plugin_global_shortcut_plugin)
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_os::init())
+    .plugin(tauri_plugin_opener::init())
     .invoke_handler(tauri::generate_handler![
       utils::utils::new_shortcut,
 
