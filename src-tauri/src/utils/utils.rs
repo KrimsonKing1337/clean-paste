@@ -52,8 +52,8 @@ use serde::Deserialize;
 pub struct SettingsData {
   #[serde(rename = "hotkey")]
   pub hotkey: Option<String>,
-  #[serde(rename = "doubleHotkey")]
-  pub doubleHotkey: Option<String>,
+  #[serde(rename = "double_hotkey")]
+  pub double_hotkey: Option<String>,
 }
 
 #[tauri::command]
@@ -552,7 +552,7 @@ pub fn apply_settings_from_str(app: &AppHandle, content: &str) -> Result<(), Str
   }
 
   // double shortcut
-  if let Some(double_str) = parsed.doubleHotkey.as_deref() {
+  if let Some(double_str) = parsed.double_hotkey.as_deref() {
     if let Some(parsed_double) = parse_double_hotkey_str(double_str) {
       set_current_double_key(parsed_double);
     }
