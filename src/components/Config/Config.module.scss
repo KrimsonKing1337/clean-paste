@@ -33,13 +33,29 @@
   margin-top: 3px;
 }
 
+.SaveButtonWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 31px;
+}
+
 .SaveButton {
-  display: block;
   padding: 6px 12px;
   border-radius: 4px;
   background-color: #0d6efd;
-  margin: 31px auto 0 auto;
   color: #fff;
 
   @include __mixins.hover-default;
+}
+
+.SavedLabel {
+  opacity: 0;
+  font-size: 14px;
+  text-align: center;
+
+  &.isActive {
+    opacity: 1;
+  }
 }

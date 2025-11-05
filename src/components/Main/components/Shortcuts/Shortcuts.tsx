@@ -32,6 +32,10 @@ export const Shortcuts = () => {
       <Desc>
         {labelForShortcuts}
       </Desc>
+
+      <Desc>
+        (Does not work inside this app)
+      </Desc>
     </div>
   );
 };
