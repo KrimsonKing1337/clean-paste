@@ -1,21 +1,43 @@
 import { getPlatformType } from 'utils';
 
-/** UI-лейблы для показа пользователю */
 export function getLabels() {
   const isMac = getPlatformType() === 'macos';
 
-  return isMac
-    ? { ctrl: 'Ctrl', alt: 'Opt', shift: 'Shift', meta: 'Cmd' }
-    : { ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift', meta: 'Win' };
+  const macButtons: Record<string, string> = {
+    ctrl: 'Ctrl',
+    alt: 'Opt',
+    shift: 'Shift',
+    meta: 'Cmd',
+  };
+
+  const otherButtons: Record<string, string> = {
+    ctrl: 'Ctrl',
+    alt: 'Alt',
+    shift: 'Shift',
+    meta: 'Win',
+  };
+
+  return isMac ? macButtons : otherButtons;
 }
 
-/** Маппинг модификаторов -> accelerator tokens для register() */
 export function getAcceleratorMap() {
   const isMac = getPlatformType() === 'macos';
 
-  return isMac
-    ? { ctrl: 'Control', alt: 'Alt', shift: 'Shift', meta: 'Command' }
-    : { ctrl: 'Control', alt: 'Alt', shift: 'Shift', meta: 'Super' };
+  const macButtons: Record<string, string> = {
+    ctrl: 'Control',
+    alt: 'Alt',
+    shift: 'Shift',
+    meta: 'Command',
+  };
+
+  const otherButtons: Record<string, string> = {
+    ctrl: 'Control',
+    alt: 'Alt',
+    shift: 'Shift',
+    meta: 'Super',
+  };
+
+  return isMac ? macButtons : otherButtons;
 }
 
 export function getLabelByAccel(value: string) {
@@ -29,11 +51,9 @@ export function getLabelByAccel(value: string) {
     const itemCur = arr[i];
 
     for (const accelsKeyCur of accelsKeys) {
-      // @ts-ignore
-      const accelsValue = accels[accelsKeyCur]; // todo
+      const accelsValue = accels[accelsKeyCur];
 
       if (itemCur === accelsValue) {
-        // @ts-ignore
         arr[i] = labels[accelsKeyCur];
       }
     }
@@ -42,7 +62,6 @@ export function getLabelByAccel(value: string) {
   return arr.join('+');
 }
 
-/** Клавиша для UI (как у тебя было) */
 export function getKeyNameUI(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.code.startsWith('Key')) {
     return e.code.slice(3).toUpperCase();
@@ -103,19 +122,18 @@ export function getKeyNameUI(e: React.KeyboardEvent<HTMLInputElement>) {
   return e.key.length === 1 ? e.key.toUpperCase() : e.key;
 }
 
-/** Клавиша в формате accelerator (для plugin-global-shortcut.register) */
 export function getKeyNameAccel(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.code.startsWith('Key')) {
-    return e.code.slice(3).toUpperCase(); // 'A'..'Z'
+    return e.code.slice(3).toUpperCase(); // A-Z
   }
 
   if (e.code.startsWith('Digit')) {
-    return e.code.slice(5);               // '0'..'9'
+    return e.code.slice(5); // 0-9
   }
 
   if (e.code.startsWith('Numpad')) {
     const rest = e.code.slice(6);
-    // не используем '+' как токен (конфликтует с разделителем), даём явные названия
+
     const voc: Record<string, string> = {
       Add: 'NumpadAdd',
       Subtract: 'NumpadSubtract',
@@ -164,7 +182,6 @@ export function getKeyNameAccel(e: React.KeyboardEvent<HTMLInputElement>) {
   return e.key.length === 1 ? e.key.toUpperCase() : e.key;
 }
 
-/** Основной helper: отдаёт и строку для UI, и accelerator-строку для сохранения/регистрации */
 export function getValues(e: React.KeyboardEvent<HTMLInputElement>) {
   const noMods = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
   const purgeKey = e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Delete';
@@ -173,7 +190,6 @@ export function getValues(e: React.KeyboardEvent<HTMLInputElement>) {
     return null;
   }
 
-  // пропускаем голые модификаторы
   if (e.key === 'Control' || e.key === 'Shift' || e.key === 'Alt' || e.key === 'Meta') {
     return null;
   }
@@ -181,7 +197,6 @@ export function getValues(e: React.KeyboardEvent<HTMLInputElement>) {
   const labels = getLabels();
   const accelMap = getAcceleratorMap();
 
-  // фиксированный порядок модификаторов (для консистентности)
   const uiMods: string[] = [];
   const accMods: string[] = [];
 
