@@ -188,10 +188,15 @@ fn is_selected_double_key(selected: DoubleKey, key: Key) -> bool {
   }
 }
 
-pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send + 'static {
+pub fn listen_for_double_key<F>(mut on_double_press: F)
+where
+  F: FnMut() + Send + 'static,
+{
   thread::spawn(move || {
     let mut last_release = Instant::now() - Duration::from_secs(1);
     let mut awaiting_second_press = false;
+    let mut target_down = false;
+    let mut extra_key_during_target = false;
 
     if let Err(err) = listen(move |event: Event| {
       let current = get_current_double_key();
@@ -203,19 +208,43 @@ pub fn listen_for_double_key<F>(mut on_double_press: F) where F: FnMut() + Send 
       let current = current.unwrap();
 
       match event.event_type {
+        EventType::KeyPress(key) if is_selected_double_key(current, key) => {
+          target_down = true;
+          extra_key_during_target = false;
+        }
+
         EventType::KeyRelease(key) if is_selected_double_key(current, key) => {
+          if !target_down {
+            return;
+          }
+
+          if extra_key_during_target {
+            target_down = false;
+            awaiting_second_press = false;
+            extra_key_during_target = false;
+
+            return;
+          }
+
+          target_down = false;
+
           let now = Instant::now();
           let diff = now.duration_since(last_release);
 
           if awaiting_second_press && diff < Duration::from_millis(300) {
             on_double_press();
-
             awaiting_second_press = false;
           } else {
             awaiting_second_press = true;
           }
 
           last_release = now;
+        }
+
+        EventType::KeyPress(key) => {
+          if target_down && !is_selected_double_key(current, key) {
+            extra_key_during_target = true;
+          }
         }
         _ => {}
       }
