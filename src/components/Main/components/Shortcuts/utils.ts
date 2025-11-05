@@ -1,10 +1,10 @@
-import { type Settings, getCmdOrCtrl } from 'utils';
+import { type SettingsForSave, getCmdOrCtrl } from 'utils';
 
 function getLabel(hotkey: string, radioHotkey: string) {
   return `${radioHotkey} and ${hotkey}`;
 }
 
-export function getLabelForShortcuts(settings: Settings) {
+export function getLabelForShortcuts(settings: SettingsForSave) {
   const { hotkey, radioHotkey } = settings;
 
   const defaultKey = getCmdOrCtrl();

@@ -10,22 +10,30 @@ export function getSettingsDirPath(): Promise<string> {
 }
 
 export async function loadSettings() {
-  const settingsCurrentJson = await invoke('load_settings') as unknown as string;
+  const currentSettingsJson = await invoke('load_settings') as unknown as string;
+  const currentSettings = JSON.parse(currentSettingsJson);
 
-  return JSON.parse(settingsCurrentJson);
+  return {
+    hotkey: currentSettings.hotkey,
+    doubleHotkey: currentSettings.double_hotkey,
+  }
 }
 
 export async function saveSettings(value: Settings) {
   const currentSettings = await loadSettings();
 
+  const currentSettingsSafe = {
+    hotkey: currentSettings.hotkey,
+    double_hotkey: currentSettings.doubleHotkey,
+  };
+
   const newValue = {
-    ...currentSettings,
-    ...value,
+    ...currentSettingsSafe,
+    hotkey: value.hotkey,
+    double_hotkey: value.doubleHotkey,
   };
 
   const newValueJson = JSON.stringify(newValue);
 
-  await invoke('save_settings', { content: newValueJson });
-
-  return newValue;
+  return await invoke('save_settings', { content: newValueJson });
 }
