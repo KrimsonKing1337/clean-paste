@@ -1,14 +1,15 @@
+@use 'styles/__functions' as __functions;
 @use 'styles/__mixins' as __mixins;
 
 .Wrapper {
   position: relative;
-  width: 280px;
+  width: __functions.rem(280);
 }
 
 .Input {
-  margin-top: 5px;
+  margin-top: __functions.rem(5);
   width: 100%;
-  padding: 8px;
+  padding: __functions.rem(8);
 }
 
 .Clear {
@@ -16,10 +17,10 @@
   z-index: 1;
   top: 0;
   bottom: 0;
-  right: 5px;
+  right: __functions.rem(5);
   margin: auto;
-  width: 16px;
-  height: 16px;
+  width: __functions.rem(16);
+  height: __functions.rem(16);
   cursor: pointer;
 
   @include __mixins.hover-default;

@@ -1,9 +1,11 @@
+@use 'styles/__functions' as __functions;
+
 .Icon {
-  height: 82px;
-  width: 82px;
+  height: __functions.rem(82);
+  width: __functions.rem(82);
 }
 
 .Title {
-  margin-top: 5vh;
-  font-size: 25px;
+  margin-top: __functions.rem(30);
+  font-size: __functions.rem(25);
 }

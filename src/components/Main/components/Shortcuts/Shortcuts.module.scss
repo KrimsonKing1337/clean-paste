@@ -1,3 +1,5 @@
+@use 'styles/__functions' as __functions;
+
 .Shortcuts {
-  margin-top: 5vh;
+  margin-top: __functions.rem(30);
 }

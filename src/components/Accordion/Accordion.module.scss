@@ -1,3 +1,4 @@
+@use 'styles/__functions' as __functions;
 @use 'styles/__mixins' as __mixins;
 
 .Accordion {
@@ -5,9 +6,9 @@
 }
 
 .Summary {
-  border: 2px #0f0f0f solid;
-  padding: 8px;
-  width: calc(100vw - 20px);
+  border: __functions.rem(2) #0f0f0f solid;
+  padding: __functions.rem(8);
+  width: calc(100vw - #{__functions.rem(20)});
 
   @include __mixins.hover-default();
 }
@@ -16,7 +17,7 @@
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(__functions.rem(-10));
   transition: all 0.3s 0s ease;
 
   &.isOpened {

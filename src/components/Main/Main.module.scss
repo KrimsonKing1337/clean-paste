@@ -1,3 +1,4 @@
+@use 'styles/__functions' as __functions;
 @use 'styles/__mixins' as __mixins;
 
 .Main {
@@ -7,17 +8,17 @@
   align-items: center;
   text-align: center;
   height: 100vh;
-  padding-top: 10vh;
-  padding-bottom: 5vh;
+  padding-top: __functions.rem(60);
+  padding-bottom: __functions.rem(30);
 }
 
 .ConfigIconWrapper {
   position: absolute;
   z-index: 1;
-  top: 2vh;
-  right: 2vh;
-  width: 5vh;
-  height: 5vh;
+  top: __functions.rem(12);
+  right: __functions.rem(12);
+  width: __functions.rem(30);
+  height: __functions.rem(30);
   cursor: pointer;
 
   @include __mixins.hover-default;

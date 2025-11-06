@@ -1,8 +1,10 @@
+@use 'styles/__functions' as __functions;
+
 .Desc {
   display: flex;
   flex-direction: column;
   justify-content: center;
   text-align: center;
-  gap: 5px;
-  margin-top: 1vh;
+  gap: __functions.rem(5);
+  margin-top: __functions.rem(6);
 }

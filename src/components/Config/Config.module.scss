@@ -1,21 +1,22 @@
+@use 'styles/__functions' as __functions;
 @use 'styles/__mixins' as __mixins;
 
 .Wrapper {
-  padding: 15px;
+  padding: __functions.rem(15);
 }
 
 .SubTitle {
-  margin-bottom: 5vh;
+  margin-bottom: __functions.rem(30);
   text-align: center;
 }
 
 .BackButton {
   position: absolute;
   z-index: 1;
-  top: 2vh;
-  right: 2vh;
-  width: 5vh;
-  height: 5vh;
+  top: __functions.rem(12);
+  right: __functions.rem(12);
+  width: __functions.rem(30);
+  height: __functions.rem(30);
   cursor: pointer;
 
   @include __mixins.hover-default;
@@ -26,11 +27,11 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  margin-top: 5px;
+  margin-top: __functions.rem(5);
 }
 
 .RadioButton {
-  margin-top: 3px;
+  margin-top: __functions.rem(3);
 }
 
 .SaveButtonWrapper {
@@ -38,12 +39,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 31px;
+  margin-top: __functions.rem(31);
 }
 
 .SaveButton {
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: __functions.rem(6) __functions.rem(12);
+  border-radius: __functions.rem(4);
   background-color: #0d6efd;
   color: #fff;
 
@@ -52,7 +53,7 @@
 
 .SavedLabel {
   opacity: 0;
-  font-size: 14px;
+  font-size: __functions.rem(14);
   text-align: center;
 
   &.isActive {

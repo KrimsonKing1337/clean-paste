@@ -1,0 +1,8 @@
+@use "sass:math";
+
+/// @param {Number} $px
+/// @param {Number} $base
+/// @return {Number}
+@function rem($px, $base: 16) {
+  @return math.div($px, $base) * 1rem;
+}

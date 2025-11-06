@@ -1,6 +1,7 @@
+@use 'styles/__functions' as __functions;
 @use 'styles/__mixins' as __mixins;
 
 .Notes {
-  margin-top: 5vh;
-  padding: 0 10px;
+  margin-top: __functions.rem(30);
+  padding: 0 __functions.rem(10);
 }

@@ -1,4 +1,6 @@
+@use 'styles/__functions' as __functions;
+
 .Label {
-  font-size: 18px;
-  margin-top: 15px;
+  font-size: __functions.rem(18);
+  margin-top: __functions.rem(15);
 }

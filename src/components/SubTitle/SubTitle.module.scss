@@ -1,3 +1,5 @@
+@use 'styles/__functions' as __functions;
+
 .SubTitle {
-  font-size: 20px;
+  font-size: __functions.rem(20);
 }
